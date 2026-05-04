@@ -1,26 +1,317 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================
+   Keyframes — اللوجو العائم (Floating Logo)
+   حركة رأسية ناعمة تشبه الطفو على الماء
+   ========================================== */
+@keyframes logo-float {
+  0%,  100% { transform: translateY(0px)   rotate(0deg);   } /* نقطة البداية والنهاية */
+  30%        { transform: translateY(-9px)  rotate(0.5deg); } /* أعلى نقطة — ميلان خفيف */
+  60%        { transform: translateY(-5px)  rotate(-0.3deg);} /* منتصف الطريق للأسفل */
+}
+
+/* ==========================================
+   Keyframes — توهج اللوجو النابض (Pulse Glow)
+   ========================================== */
+@keyframes gold-pulse {
+  0%,  100% { box-shadow: 0 0 25px rgba(212,175,55,0.40), 0 0 50px rgba(212,175,55,0.15); }
+  50%        { box-shadow: 0 0 40px rgba(212,175,55,0.65), 0 0 80px rgba(212,175,55,0.25); }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* ==========================================
+     ألوان الهوية البصرية لأكاديمية طنطا
+     ========================================== */
+
+  /* اللون السيان - للأزرار والروابط الرئيسية */
+  --color-cyan: var(--cyan);
+  --color-cyan-foreground: var(--cyan-foreground);
+  --color-cyan-muted: var(--cyan-muted);
+
+  /* اللون الذهبي - للإشعارات والبيانات المهمة */
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-gold-muted: var(--gold-muted);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ==========================================
+   المتغيرات الأساسية للوضع الداكن دائماً
+   التطبيق يعمل في الوضع الداكن فقط
+   ========================================== */
+:root {
+  /* خلفية سوداء عميقة */
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.95 0 0);
+
+  /* بطاقات بلون رمادي داكن جداً */
+  --card: oklch(0.12 0 0);
+  --card-foreground: oklch(0.95 0 0);
+
+  /* القوائم المنسدلة */
+  --popover: oklch(0.12 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+
+  /* اللون الأساسي = الكحلي الملكي لنادي طنطا */
+  --primary: oklch(0.60 0.22 255);
+  --primary-foreground: oklch(0.98 0 0);
+
+  /* اللون الثانوي = رمادي داكن */
+  --secondary: oklch(0.18 0 0);
+  --secondary-foreground: oklch(0.85 0 0);
+
+  /* النصوص الخافتة */
+  --muted: oklch(0.18 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+
+  /* لون التمييز عند التحديد */
+  --accent: oklch(0.18 0 0);
+  --accent-foreground: oklch(0.85 0 0);
+
+  /* لون الخطأ والحذف */
+  --destructive: oklch(0.65 0.22 25);
+
+  /* الحدود والإطارات */
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.60 0.22 255);
+
+  /* نصف قطر الزوايا الدائرية */
+  --radius: 0.625rem;
+
+  /* ==========================================
+     الألوان المخصصة للهوية البصرية
+     ========================================== */
+
+  /* الكحلي الملكي - لون نادي طنطا الرئيسي للأزرار والروابط */
+  --cyan: oklch(0.60 0.22 255);
+  --cyan-foreground: oklch(0.98 0 0);
+  --cyan-muted: oklch(0.60 0.22 255 / 15%);
+
+  /* الذهبي/الأصفر - لون نادي طنطا الثاني للإشعارات والبيانات المهمة */
+  --gold: oklch(0.85 0.17 92);
+  --gold-foreground: oklch(0.08 0 0);
+  --gold-muted: oklch(0.85 0.17 92 / 15%);
+
+  /* الشريط الجانبي */
+  --sidebar: oklch(0.1 0 0);
+  --sidebar-foreground: oklch(0.9 0 0);
+  --sidebar-primary: oklch(0.60 0.22 255);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.18 0 0);
+  --sidebar-accent-foreground: oklch(0.85 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.60 0.22 255);
+}
+
+/* ==========================================
+   الأنماط الأساسية المطبقة على الكل
+   ========================================== */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  /* تطبيق الخلفية الداكنة على كامل الصفحة */
+  body {
+    @apply bg-background text-foreground;
+    /* ضمان اتجاه النص من اليمين لليسار للمحتوى العربي */
+    direction: rtl;
+    /* خط Cairo الأنيق — يدعم العربية بشكل احترافي */
+    font-family: var(--font-cairo), system-ui, -apple-system, "Segoe UI", sans-serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ==========================================
+   كلاسات مساعدة للهوية البصرية
+   يمكن استخدامها مباشرة في JSX
+   ========================================== */
+@layer utilities {
+  /* نص بلون سيان */
+  .text-cyan-brand {
+    color: var(--cyan);
+  }
+
+  /* نص بلون ذهبي */
+  .text-gold-brand {
+    color: var(--gold);
+  }
+
+  /* خلفية سيان خفيفة (للبيانات المميزة) */
+  .bg-cyan-subtle {
+    background-color: var(--cyan-muted);
+  }
+
+  /* خلفية ذهبية خفيفة (للتنبيهات المهمة) */
+  .bg-gold-subtle {
+    background-color: var(--gold-muted);
+  }
+
+  /* حد سيان للمدخلات عند التركيز */
+  .border-cyan-brand {
+    border-color: var(--cyan);
+  }
+
+  /* تأثير توهج ذهبي للإشعارات */
+  .glow-gold {
+    box-shadow: 0 0 20px var(--gold-muted);
+  }
+
+  /* تأثير توهج سيان للأزرار الرئيسية */
+  .glow-cyan {
+    box-shadow: 0 0 20px var(--cyan-muted);
+  }
+
+  /* ==========================================
+     حقول الإدخال الذهبية — Gold Input Fields
+     ========================================== */
+  .input-gold {
+    background: rgba(10, 22, 50, 0.55) !important;
+    border: 1px solid rgba(212, 175, 55, 0.22) !important;
+    color: white !important;
+    backdrop-filter: blur(8px) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  }
+
+  .input-gold::placeholder {
+    color: rgba(255, 255, 255, 0.30) !important;
+  }
+
+  .input-gold:focus {
+    border-color: rgba(212, 175, 55, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12), 0 0 16px rgba(212, 175, 55, 0.08) !important;
+    outline: none !important;
+  }
+
+  /* ==========================================
+     اللوجو العائم — يطفو بهدوء كقطرة ماء
+     ========================================== */
+  .logo-float {
+    animation: logo-float 4s ease-in-out infinite; /* دورة 4 ثواني لا نهائية */
+    will-change: transform;                         /* تحسين أداء الـ GPU */
+    filter: drop-shadow(0 8px 16px rgba(212,175,55,0.20)); /* ظل ذهبي تحت اللوجو */
+  }
+
+  /* الحلقة الذهبية حول اللوجو — نبض خفيف */
+  .logo-ring {
+    animation: gold-pulse 3.5s ease-in-out infinite; /* نبض دوري ناعم */
+  }
+
+  /* ==========================================
+     تأثير الزرار الذهبي المعدني — Gold Metallic Neumorphism
+     للأزرار الرئيسية في صفحة تسجيل الدخول
+     ========================================== */
+  .btn-gold {
+    border-radius: 9999px !important;
+    /* تدرج ذهبي معدني */
+    background: linear-gradient(
+      135deg,
+      oklch(0.58 0.14 85)  0%,
+      oklch(0.82 0.18 92) 30%,
+      oklch(0.93 0.11 90) 50%,
+      oklch(0.82 0.18 92) 70%,
+      oklch(0.58 0.14 85) 100%
+    ) !important;
+    /* نص داكن على الذهبي للقراءة */
+    color: oklch(0.12 0.04 60) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    /* ظل ذهبي مزدوج — يشعر بالانتفاخ المعدني */
+    box-shadow:
+      -4px -4px 12px oklch(0.93 0.11 90 / 0.55),
+       4px  4px 12px oklch(0.50 0.13 80 / 0.65),
+       0    0   28px oklch(0.82 0.18 92 / 0.30) !important;
+    transition: box-shadow 0.25s ease, transform 0.18s ease, filter 0.2s ease !important;
+  }
+
+  /* انضغاط ذهبي عند المرور */
+  .btn-gold:hover:not(:disabled) {
+    filter: brightness(1.08) !important;
+    box-shadow:
+      inset -3px -3px 9px oklch(0.93 0.11 90 / 0.45),
+      inset  3px  3px 9px oklch(0.50 0.13 80 / 0.55),
+      0 0 18px oklch(0.82 0.18 92 / 0.25) !important;
+    transform: scale(0.982) !important;
+  }
+
+  /* ضغط أعمق */
+  .btn-gold:active:not(:disabled) {
+    box-shadow:
+      inset -4px -4px 11px oklch(0.93 0.11 90 / 0.55),
+      inset  4px  4px 11px oklch(0.50 0.13 80 / 0.70) !important;
+    transform: scale(0.965) !important;
+    filter: brightness(0.96) !important;
+  }
+
+  /* ==========================================
+     تأثير الزرار المائي — Water Drop Neumorphism
+     الزر ينبرز كقطرة ماء وينضغط عند اللمس
+     ========================================== */
+  .btn-water {
+    /* حواف دائرية تماماً كشكل القطرة */
+    border-radius: 9999px !important;
+
+    /* ظل مزدوج: فاتح أعلى اليسار + غامق أسفل اليمين = إحساس الانتفاخ */
+    box-shadow:
+      -5px -5px 14px oklch(0.78 0.20 255 / 0.55),
+       5px  5px 14px oklch(0.35 0.20 255 / 0.72),
+       0    0   22px oklch(0.60 0.22 255 / 0.22) !important;
+
+    /* انتقال ناعم للظل والحجم */
+    transition: box-shadow 0.25s ease, transform 0.18s ease !important;
+  }
+
+  /* عند المرور — الزر ينضغط كأنه يغوص في الماء */
+  .btn-water:hover:not(:disabled) {
+    box-shadow:
+      inset -3px -3px 9px oklch(0.78 0.20 255 / 0.45),
+      inset  3px  3px 9px oklch(0.35 0.20 255 / 0.62),
+      0      0   12px oklch(0.60 0.22 255 / 0.14) !important;
+    transform: scale(0.982) !important;
+  }
+
+  /* عند الضغط — انضغاط أعمق */
+  .btn-water:active:not(:disabled) {
+    box-shadow:
+      inset -4px -4px 11px oklch(0.78 0.20 255 / 0.55),
+      inset  4px  4px 11px oklch(0.35 0.20 255 / 0.76) !important;
+    transform: scale(0.965) !important;
+  }
 }
