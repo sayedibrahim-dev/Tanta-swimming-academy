@@ -77,7 +77,7 @@ export default async function ParentSwimmersPage() {
   const paidThisMonthIds = new Set(approvedPayments?.map((p) => p.swimmer_id) ?? []);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* رأس الصفحة */}
       <div className="flex items-center justify-between mb-8">

@@ -46,7 +46,7 @@ export default async function AdminPaymentsPage() {
 
   return (
     // حاوية الصفحة
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* رأس الصفحة */}
       <div className="mb-8">

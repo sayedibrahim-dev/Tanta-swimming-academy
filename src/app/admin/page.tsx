@@ -117,7 +117,7 @@ export default async function AdminDashboard() {
   const unpaidSwimmers = (totalSwimmers ?? 0) - (paidThisMonth?.length ?? 0);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* ==========================================
           رأس الصفحة - الترحيب

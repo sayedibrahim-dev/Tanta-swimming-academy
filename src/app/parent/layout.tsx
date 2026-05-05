@@ -12,7 +12,7 @@ export default async function ParentLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen bg-background">
       <Sidebar userRole={session.user.role} userName={session.user.name} />
-      <main className="mr-64 min-h-screen">{children}</main>
+      <main className="md:mr-64 min-h-screen pt-14 md:pt-0">{children}</main>
     </div>
   );
 }

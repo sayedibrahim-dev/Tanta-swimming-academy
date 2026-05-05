@@ -60,7 +60,7 @@ export default async function ParentDashboard() {
   const unpaidCount = unpaidSwimmers.length; // عدد غير المدفوعين هذا الشهر
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
 
       {/* ==========================================
           رأس الصفحة — الترحيب بولي الأمر

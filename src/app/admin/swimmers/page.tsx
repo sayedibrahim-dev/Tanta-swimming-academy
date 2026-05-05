@@ -84,7 +84,7 @@ export default async function AdminSwimmersPage() {
 
   return (
     // حاوية الصفحة بمسافة داخلية
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* رأس الصفحة */}
       <div className="mb-8">

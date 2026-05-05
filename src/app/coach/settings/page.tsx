@@ -160,7 +160,7 @@ export default function CoachSettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className="p-4 md:p-8 max-w-2xl mx-auto">
 
       {/* رأس الصفحة */}
       <div className="mb-8">

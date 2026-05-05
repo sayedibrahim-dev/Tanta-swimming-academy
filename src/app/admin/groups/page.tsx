@@ -52,7 +52,7 @@ export default async function AdminGroupsPage() {
   ]);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* رأس الصفحة */}
       <div className="mb-8">

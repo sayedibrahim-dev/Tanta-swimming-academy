@@ -41,7 +41,7 @@ export default async function PaymentsPage() {
   const paymentMap = new Map(payments?.map((p) => [p.swimmer_id, p]) ?? []);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* رأس الصفحة */}
       <div className="mb-8">

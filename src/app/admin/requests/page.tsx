@@ -69,7 +69,7 @@ export default async function AdminRequestsPage() {
 
   return (
     // حاوية الصفحة مع padding من كل الجهات
-    <div className="p-8">
+    <div className="p-4 md:p-8">
 
       {/* رأس الصفحة */}
       <div className="mb-8">

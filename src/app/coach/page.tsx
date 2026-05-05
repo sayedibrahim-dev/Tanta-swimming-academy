@@ -91,7 +91,7 @@ export default async function CoachDashboard() {
   const sunTueThu = groupsWithPayment.filter((g) => g.day_pattern === "SUN_TUE_THU");
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
 
       {/* ==========================================
           رأس الصفحة
