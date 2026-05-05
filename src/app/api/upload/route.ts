@@ -46,12 +46,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "bucket غير مسموح به" }, { status: 400 });
   }
 
-  // التحقق من نوع الملف (صور فقط)
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "يرجى رفع صورة فقط" }, { status: 400 });
+  // ==========================================
+  // تنظيف اسم المجلد لمنع Path Traversal
+  // نزيل .. و / والأحرف الخطرة
+  // ==========================================
+  const sanitizedFolder = folder
+    .replace(/\.\./g, "")           // إزالة .. (path traversal)
+    .replace(/^\/+|\/+$/g, "")      // إزالة / من البداية والنهاية
+    .replace(/[^a-zA-Z0-9\-_]/g, "_"); // فقط أحرف وأرقام وشرطة
+
+  if (!sanitizedFolder) {
+    return NextResponse.json({ error: "اسم المجلد غير صحيح" }, { status: 400 });
   }
 
-  // التحقق من حجم الملف (5MB كحد أقصى)
+  // التحقق من حجم الملف (5MB كحد أقصى) — قبل قراءة المحتوى لتوفير الموارد
   if (file.size > 5 * 1024 * 1024) {
     return NextResponse.json({ error: "حجم الصورة يجب أن لا يتجاوز 5 ميجابايت" }, { status: 400 });
   }
@@ -60,8 +68,24 @@ export async function POST(req: NextRequest) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  // توليد اسم فريد للملف: folder/timestamp-filename (لتجنب التكرار)
-  const filename = `${folder}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+  // ==========================================
+  // التحقق من نوع الملف عبر Magic Bytes
+  // أكثر أماناً من MIME type (الذي يأتي من المتصفح ويمكن تزويره)
+  // ==========================================
+  const bytes = new Uint8Array(arrayBuffer.slice(0, 12));
+  const isJPEG = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+  const isPNG  = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+  const isGIF  = bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38;
+  const isWebP = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+              && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+
+  if (!isJPEG && !isPNG && !isGIF && !isWebP) {
+    return NextResponse.json({ error: "يرجى رفع صورة حقيقية (JPG أو PNG أو WebP)" }, { status: 400 });
+  }
+
+  // توليد اسم فريد للملف: sanitizedFolder/timestamp-filename (لتجنب التكرار)
+  const safeFilename = file.name.replace(/\s/g, "_").replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const filename = `${sanitizedFolder}/${Date.now()}-${safeFilename}`;
 
   // رفع الصورة لـ Supabase Storage باستخدام service role key (بيتجاوز RLS)
   const { data, error: uploadError } = await supabaseAdmin

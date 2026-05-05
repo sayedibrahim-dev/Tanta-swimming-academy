@@ -140,14 +140,14 @@ $$ LANGUAGE plpgsql;
 
 -- ==========================================
 -- إدراج حساب الأدمن الافتراضي
--- غيّر كلمة السر فوراً بعد أول تسجيل دخول!
--- كلمة السر الافتراضية: admin123
+-- ⚠️  يجب تغيير كلمة السر فوراً بعد أول تسجيل دخول!
+-- ⚠️  لا تُستخدم بيانات الاعتماد الافتراضية في بيئة الإنتاج
+-- الكلمة الافتراضية موثقة في ملف .env.local المحلي فقط
 -- ==========================================
 INSERT INTO users (email, password_hash, name, phone, role)
 VALUES (
   'admin@tanat-swimming.com',
-  -- هذا الهاش يمثل كلمة السر: admin123
-  '$2b$10$rOzJqBqKm8Q5N1vY3mXhP.K8Pp2mVf5X9YzXL1BHe4Q3O5Rl0QMIS',
+  '$2b$12$qtIA12dF/k6thOrZOSqh5uNurWRjEjg67xPxPePFB/D3Fla4HfDVW',
   'مدير الأكاديمية',
   '0100000000',
   'admin'

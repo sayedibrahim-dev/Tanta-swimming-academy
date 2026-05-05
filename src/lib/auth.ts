@@ -68,13 +68,15 @@ export const authOptions: NextAuthOptions = {
         }
 
         // البحث عن المستخدم في قاعدة البيانات بالإيميل
-        const { data: user, error } = await supabaseAdmin
+        // maybeSingle بدل single — لأن عدم الوجود طبيعي (بريد خاطئ)
+        // single() بيرمي PGRST116 error في الـ logs عند كل محاولة دخول بإيميل غير موجود
+        const { data: user } = await supabaseAdmin
           .from("users")
           .select("id, email, name, phone, role, password_hash")
           .eq("email", credentials.email)
-          .single();
+          .maybeSingle();
 
-        if (error || !user) {
+        if (!user) {
           // المستخدم غير موجود
           return null;
         }
