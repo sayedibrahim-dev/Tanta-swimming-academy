@@ -146,8 +146,8 @@ $$ LANGUAGE plpgsql;
 -- ==========================================
 INSERT INTO users (email, password_hash, name, phone, role)
 VALUES (
-  'admin@tanat-swimming.com',
-  '$2b$12$qtIA12dF/k6thOrZOSqh5uNurWRjEjg67xPxPePFB/D3Fla4HfDVW',
+  'admin@tanta-swimming.com',
+  '$2b$12$ycgm52V3lHoO7wCKWUQJJ.OjnnN8ggA94uw0EkhPZWxIkXWzYFfcC',
   'مدير الأكاديمية',
   '0100000000',
   'admin'
