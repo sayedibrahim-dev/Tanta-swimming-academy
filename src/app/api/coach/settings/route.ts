@@ -77,11 +77,12 @@ export async function PATCH(req: NextRequest) {
     }
 
     // التحقق من عدم تكرار الإيميل الجديد مع مستخدم آخر
+    // maybeSingle بدل single — لأن عدم الوجود هو الحالة الطبيعية (إيميل جديد فريد)
     const { data: existingUser } = await supabaseAdmin
       .from("users")
       .select("id")
       .eq("email", newEmail.trim())
-      .single();
+      .maybeSingle();
 
     // لو الإيميل مستخدم من شخص آخر — ارجع بخطأ
     if (existingUser && existingUser.id !== user.id) {

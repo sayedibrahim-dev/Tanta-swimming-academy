@@ -132,10 +132,15 @@ export async function POST(
     console.error("خطأ في تحديث السباح:", swimmerUpdateError);
 
     // Rollback: إعادة الطلب لحالة pending لأن العملية فشلت
-    await supabaseAdmin
+    const { error: rollbackError } = await supabaseAdmin
       .from("enrollment_requests")
       .update({ status: "pending", reviewed_by: null, reviewed_at: null })
       .eq("id", requestId);
+
+    // لو الـ rollback نفسه فشل — DB في حالة غير متسقة (request=approved, swimmer=pending)
+    if (rollbackError) {
+      console.error("CRITICAL: rollback فشل — DB inconsistent للطلب:", requestId, rollbackError);
+    }
 
     return NextResponse.json(
       { error: "حدث خطأ أثناء تفعيل السباح" },

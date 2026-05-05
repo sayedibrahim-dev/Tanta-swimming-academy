@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { redirect } from "next/navigation";
 import PaymentUploadCard from "./PaymentUploadCard";
 import { CreditCard } from "lucide-react";
 
@@ -12,6 +13,7 @@ const monthNames = [
 
 export default async function PaymentsPage() {
   const session = await getAppSession();
+  if (!session || session.user.role !== "parent") redirect("/login");
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
@@ -20,7 +22,7 @@ export default async function PaymentsPage() {
   const { data: swimmers } = await supabaseAdmin
     .from("swimmers")
     .select("id, name, age, level")
-    .eq("parent_id", session!.user.profileId)
+    .eq("parent_id", session.user.profileId)
     .eq("status", "active");
 
   // جلب حالة الدفع لهذا الشهر لكل سباح

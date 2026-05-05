@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { redirect } from "next/navigation";
 import { UserPlus, Clock, CheckCircle2, XCircle, Users, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { levelLabels } from "@/lib/types"; // ثابت ترجمة المستويات المشترك
@@ -41,6 +42,7 @@ const dayPatternLabel: Record<string, string> = {
 
 export default async function ParentSwimmersPage() {
   const session = await getAppSession();
+  if (!session || session.user.role !== "parent") redirect("/login");
 
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
   const now          = new Date();
@@ -56,7 +58,7 @@ export default async function ParentSwimmersPage() {
       training_groups ( label, day_pattern, time_slot ),
       enrollment_requests ( status, notes, created_at )
     `)
-    .eq("parent_id", session!.user.profileId)
+    .eq("parent_id", session.user.profileId)
     .order("created_at", { ascending: false });
 
   // جلب الدفعات المقبولة لهذا الشهر فقط (لحساب حالة الدفع ديناميكياً)

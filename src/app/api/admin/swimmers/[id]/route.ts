@@ -73,14 +73,16 @@ export async function PATCH(
   }
 
   // تحديث بيانات السباح في قاعدة البيانات
-  const { error } = await supabaseAdmin
-    .from("swimmers")            // في جدول السباحين
+  // .select("id") عشان نتحقق إن row اتحدثت فعلاً (مش 0 rows)
+  const { data: updated, error } = await supabaseAdmin
+    .from("swimmers")
     .update({
       coach_id, // المدرب الجديد (تم التحقق من ملكية المجموعة له)
       group_id, // المجموعة الجديدة (تم التحقق من انتمائها للمدرب)
     })
-    .eq("id", id)               // للسباح المحدد بالمعرف
-    .eq("status", "active");    // بشرط أن يكون نشطاً
+    .eq("id", id)
+    .eq("status", "active")     // بشرط أن يكون نشطاً
+    .select("id");              // نرجع الـ id عشان نعرف لو اتحدث
 
   // التعامل مع أي خطأ من Supabase
   if (error) {
@@ -88,6 +90,14 @@ export async function PATCH(
     return NextResponse.json(
       { error: "حدث خطأ أثناء إعادة التعيين" },
       { status: 500 }
+    );
+  }
+
+  // لو مفيش rows اتحدثت — السباح مش موجود أو مش نشط
+  if (!updated || updated.length === 0) {
+    return NextResponse.json(
+      { error: "السباح غير موجود أو غير نشط" },
+      { status: 404 }
     );
   }
 

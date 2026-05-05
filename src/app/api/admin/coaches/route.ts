@@ -50,8 +50,13 @@ function generateTempPassword(): string {
     password += all[Math.floor(Math.random() * all.length)];
   }
 
-  // خلط الأحرف عشوائياً عشان الأحرف المضمونة ماتبقاش دايماً في الأول
-  return password.split("").sort(() => Math.random() - 0.5).join("");
+  // خلط الأحرف بـ Fisher-Yates (أصح إحصائياً من sort())
+  const arr = password.split("");
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.join("");
 }
 
 // ==========================================
@@ -88,11 +93,12 @@ export async function POST(req: NextRequest) {
   const { name, phone, email } = parsed.data;
 
   // التحقق من عدم تكرار الإيميل في قاعدة البيانات
+  // maybeSingle بدل single — لأن عدم الوجود هو الحالة الطبيعية عند إنشاء مدرب جديد
   const { data: existingUser } = await supabaseAdmin
     .from("users")
     .select("id")
     .eq("email", email)
-    .single();
+    .maybeSingle();
 
   // لو الإيميل موجود مسبقاً — ارجع بخطأ
   if (existingUser) {

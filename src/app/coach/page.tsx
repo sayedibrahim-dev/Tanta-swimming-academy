@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { redirect } from "next/navigation";
 import { Users, CheckCircle2, XCircle, CalendarDays, UserCircle2 } from "lucide-react";
 
 // ==========================================
@@ -16,9 +17,10 @@ const dayPatternLabels: Record<string, string> = {
 // ==========================================
 export default async function CoachDashboard() {
 
-  // جلب بيانات الجلسة للحصول على معرف المدرب واسمه
+  // جلب بيانات الجلسة والتحقق من الصلاحية
   const session = await getAppSession();
-  const coachId = session?.user.profileId; // معرف المدرب في جدول coaches
+  if (!session || session.user.role !== "coach") redirect("/login");
+  const coachId = session.user.profileId; // معرف المدرب في جدول coaches
 
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
   const now          = new Date();

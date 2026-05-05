@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { redirect } from "next/navigation";
 import { Users, ClipboardList, CreditCard, GraduationCap } from "lucide-react";
 
 // ==========================================
@@ -61,6 +62,7 @@ function StatCard({
 // ==========================================
 export default async function AdminDashboard() {
   const session = await getAppSession();
+  if (!session || session.user.role !== "admin") redirect("/login");
 
   // الشهر والسنة الحاليان لحساب غير المدفوعين ديناميكياً
   const now          = new Date();

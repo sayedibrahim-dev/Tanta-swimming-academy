@@ -33,11 +33,13 @@ export async function POST(req: NextRequest) {
     // ==========================================
     // التحقق من عدم تكرار البريد الإلكتروني
     // ==========================================
+    // maybeSingle بدل single — لأن مفيش مستخدم ده طبيعي (التسجيل الأول)
+    // single() بيرمي PGRST116 error في الـ logs لو مفيش rows
     const { data: existingUser } = await supabaseAdmin
       .from("users")
       .select("id")
       .eq("email", email)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       return NextResponse.json(

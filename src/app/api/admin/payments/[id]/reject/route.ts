@@ -10,13 +10,7 @@ import { authOptions } from "@/lib/auth";
 // استيراد الـ Supabase Client بصلاحيات كاملة
 import { supabaseAdmin } from "@/lib/supabase";
 
-// استيراد مكتبة Zod للتحقق من صحة البيانات الواردة
-import { z } from "zod";
-
-// Schema للتحقق من البيانات الواردة في الـ body
-const rejectSchema = z.object({
-  swimmer_id: z.string().uuid("معرف السباح غير صحيح"), // محتاجينه للتأكيد فقط
-});
+// ملاحظة: الـ reject لا يحتاج body — معرف الدفعة موجود في الـ URL
 
 // ==========================================
 // Handler الـ POST — بيستقبل طلب رفض الإيصال
@@ -35,15 +29,6 @@ export async function POST(
 
   // استخراج معرف الدفعة من الـ URL
   const { id: paymentId } = await params; // await مطلوب لأن params هو Promise
-
-  // قراءة البيانات من الـ body والتحقق منها
-  const body = await req.json();
-  const parsed = rejectSchema.safeParse(body);
-
-  // لو البيانات غير صحيحة — ارجع بخطأ 400
-  if (!parsed.success) {
-    return NextResponse.json({ error: "البيانات غير صحيحة" }, { status: 400 });
-  }
 
   // التحقق من وجود الدفعة وأنها لا تزال معلقة
   const { data: payment, error: fetchError } = await supabaseAdmin

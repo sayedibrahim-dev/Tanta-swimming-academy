@@ -118,8 +118,8 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // تمرير swimmer_id عشان نحدّث payment_status لما نقبل
-      body: JSON.stringify({ swimmer_id: confirmModal.swimmerId }),
+      // لا يحتاج body — معرف الدفعة موجود في الـ URL
+      body: JSON.stringify({}),
     });
 
     setSubmitting(false); // إيقاف حالة التحميل
