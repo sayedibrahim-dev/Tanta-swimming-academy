@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { redirect } from "next/navigation";
-import { UserPlus, Clock, CheckCircle2, XCircle, Users, GraduationCap } from "lucide-react";
+import { UserPlus, Clock, CheckCircle2, XCircle, Users, GraduationCap, Phone } from "lucide-react";
 import Link from "next/link";
 import { levelLabels } from "@/lib/types"; // ثابت ترجمة المستويات المشترك
 
@@ -54,7 +54,7 @@ export default async function ParentSwimmersPage() {
     .from("swimmers")
     .select(`
       id, name, age, level, status, created_at,
-      coaches ( name ),
+      coaches ( name, phone ),
       training_groups ( label, day_pattern, time_slot ),
       enrollment_requests ( status, notes, created_at )
     `)
@@ -180,19 +180,37 @@ export default async function ParentSwimmersPage() {
                   تفاصيل إضافية حسب الحالة
                   ========================================== */}
 
-              {/* السباح مقبول: عرض المدرب والمجموعة */}
+              {/* السباح مقبول: عرض المدرب ورقمه والمجموعة */}
               {swimmer.status === "active" && swimmer.coaches && (
                 <div
                   className="mt-4 pt-4 border-t grid grid-cols-2 gap-3"
                   style={{ borderColor: "var(--border)" }}
                 >
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4" style={{ color: "var(--cyan)" }} />
+                  {/* عمود المدرب — الاسم + رقم الهاتف */}
+                  <div className="flex items-start gap-2">
+                    <GraduationCap className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--cyan)" }} />
                     <div>
                       <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>المدرب</p>
                       <p className="text-sm text-white font-medium">{swimmer.coaches.name}</p>
+
+                      {/* رقم المدرب — بيظهر بس لو موجود */}
+                      {swimmer.coaches.phone && (
+                        <a
+                          href={`tel:${swimmer.coaches.phone}`}
+                          className="flex items-center gap-1 mt-1 text-xs transition-opacity hover:opacity-80"
+                          style={{ color: "var(--cyan)" }}
+                          title="اتصل بالمدرب"
+                        >
+                          <Phone className="w-3 h-3 flex-shrink-0" />
+                          <span className="font-mono" style={{ direction: "ltr" }}>
+                            {swimmer.coaches.phone}
+                          </span>
+                        </a>
+                      )}
                     </div>
                   </div>
+
+                  {/* عمود المجموعة */}
                   {swimmer.training_groups && (
                     <div>
                       <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>المجموعة</p>
