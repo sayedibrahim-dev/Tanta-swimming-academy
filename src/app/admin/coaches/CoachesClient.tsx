@@ -19,7 +19,6 @@ import {
   CheckCircle2,  // أيقونة النجاح
   Eye,           // أيقونة إظهار الباسورد
   EyeOff,        // أيقونة إخفاء الباسورد
-  Send,          // أيقونة إرسال رابط إعادة كلمة المرور
 } from "lucide-react";
 
 // استيراد مكوّن الزرار والـ Input والـ Label من shadcn/ui
@@ -96,18 +95,6 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
 
   // رسالة الخطأ في modal التعديل
   const [editError, setEditError] = useState<string | null>(null);
-
-  // ==========================================
-  // حالة modal إرسال رابط إعادة كلمة المرور للمدرب
-  // ==========================================
-  const [resetModal, setResetModal] = useState<{
-    coachId: string;
-    name:    string;
-    email:   string;
-  } | null>(null);
-  const [sendingReset, setSendingReset]   = useState(false);
-  const [resetError,   setResetError]     = useState<string | null>(null);
-  const [resetSuccess, setResetSuccess]   = useState<string | null>(null); // الإيميل المُرسَل إليه
 
   // حالة التحميل أثناء إرسال الفورم أو الحذف
   const [submitting, setSubmitting] = useState(false);
@@ -255,44 +242,6 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
       phone:   coach.phone ?? "",           // التليفون الحالي (أو فارغ)
       email:   coach.user?.email ?? "",     // الإيميل الحالي (أو فارغ)
     });
-  };
-
-  // ==========================================
-  // دالة فتح modal إرسال رابط إعادة كلمة المرور
-  // ==========================================
-  const openResetModal = (coach: CoachItem) => {
-    setResetError(null);
-    setResetModal({
-      coachId: coach.id,
-      name:    coach.name,
-      email:   coach.user?.email ?? "",
-    });
-  };
-
-  // ==========================================
-  // دالة إرسال الرابط للمدرب
-  // ==========================================
-  const handleSendReset = async () => {
-    if (!resetModal) return;
-    setSendingReset(true);
-    setResetError(null);
-
-    const res = await fetch(
-      `/api/admin/coaches/${resetModal.coachId}/send-reset`,
-      { method: "POST" }
-    );
-
-    setSendingReset(false);
-
-    if (!res.ok) {
-      const data = await res.json();
-      setResetError(data.error ?? "حدث خطأ، حاول مرة أخرى");
-      return;
-    }
-
-    const savedEmail = resetModal.email;
-    setResetModal(null);
-    setResetSuccess(savedEmail);
   };
 
   // ==========================================
@@ -489,22 +438,6 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
                   </div>
                 </div>
 
-                {/* ==========================================
-                    زرار إرسال رابط إعادة كلمة المرور
-                    الأدمن لا يكتب الباسورد — المدرب يعيّنه بنفسه
-                    ========================================== */}
-                <button
-                  onClick={() => openResetModal(coach)}
-                  className="mt-auto flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
-                  style={{
-                    background: "var(--gold-muted)",
-                    color:      "var(--gold)",
-                    border:     "1px solid oklch(0.85 0.16 85 / 30%)",
-                  }}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  إرسال رابط إعادة كلمة المرور
-                </button>
               </div>
             );
           })}
@@ -855,98 +788,6 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==========================================
-          Modal تأكيد إرسال رابط إعادة كلمة المرور للمدرب
-          ========================================== */}
-      {resetModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "oklch(0 0 0 / 70%)" }}
-          onClick={(e) => { if (e.target === e.currentTarget && !sendingReset) setResetModal(null); }}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl p-6"
-            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Send className="w-5 h-5" style={{ color: "var(--gold)" }} />
-                <h2 className="text-lg font-semibold text-white">إرسال رابط إعادة كلمة المرور</h2>
-              </div>
-              <button
-                onClick={() => { if (!sendingReset) setResetModal(null); }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
-              >
-                <X className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-              </button>
-            </div>
-
-            <div
-              className="rounded-xl p-4 mb-5"
-              style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}
-            >
-              <p className="text-sm text-white mb-1 font-medium">{resetModal.name}</p>
-              <p className="text-xs font-mono" style={{ color: "var(--muted-foreground)", direction: "ltr" }}>
-                {resetModal.email}
-              </p>
-            </div>
-
-            <p className="text-sm mb-5" style={{ color: "var(--muted-foreground)" }}>
-              سيصل رابط لبريده الإلكتروني يمكّنه من تعيين كلمة مرور جديدة بنفسه.
-              الرابط صالح لمدة <span className="text-white font-semibold">ساعة واحدة</span> فقط.
-            </p>
-
-            {resetError && (
-              <p className="text-sm rounded-lg p-3 mb-4"
-                style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)", border: "1px solid oklch(0.65 0.22 25 / 30%)" }}>
-                {resetError}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSendReset}
-                disabled={sendingReset}
-                className="flex-1 font-semibold h-10"
-                style={{ background: "var(--gold-muted)", color: "var(--gold)", border: "1px solid oklch(0.85 0.16 85 / 40%)" }}
-              >
-                {sendingReset
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <><Send className="w-4 h-4 ml-1.5" /> إرسال الرابط</>
-                }
-              </Button>
-              <Button
-                onClick={() => setResetModal(null)}
-                disabled={sendingReset}
-                variant="ghost"
-                className="flex-1 h-10"
-                style={{ background: "var(--secondary)", color: "var(--muted-foreground)" }}
-              >
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal نجاح إرسال الرابط للمدرب */}
-      {resetSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
-          <div className="w-full max-w-md rounded-2xl p-6 text-center" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "oklch(0.65 0.18 145 / 15%)" }}>
-              <CheckCircle2 className="w-7 h-7" style={{ color: "oklch(0.72 0.2 145)" }} />
-            </div>
-            <h2 className="text-lg font-bold text-white mb-2">تم إرسال الرابط!</h2>
-            <p className="text-sm mb-1" style={{ color: "var(--muted-foreground)" }}>تم إرسال رابط إعادة تعيين كلمة المرور إلى</p>
-            <p className="text-sm font-mono font-semibold mb-4" style={{ color: "var(--cyan)", direction: "ltr" }}>{resetSuccess}</p>
-            <p className="text-xs mb-5" style={{ color: "var(--muted-foreground)" }}>الرابط صالح لمدة ساعة — إذا لم يجده في الوارد يبحث في Spam</p>
-            <Button onClick={() => setResetSuccess(null)} className="w-full font-semibold h-10" style={{ background: "var(--cyan)", color: "var(--cyan-foreground)" }}>
-              حسناً
-            </Button>
           </div>
         </div>
       )}
