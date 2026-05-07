@@ -104,3 +104,44 @@ export async function PATCH(
   // الرد بالنجاح
   return NextResponse.json({ success: true });
 }
+
+// ==========================================
+// DELETE /api/admin/swimmers/[id]
+// حذف سباح نهائياً من النظام
+// ==========================================
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // التحقق من صلاحية الأدمن
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  // التحقق من وجود السباح أولاً
+  const { data: swimmer, error: fetchError } = await supabaseAdmin
+    .from("swimmers")
+    .select("id, name")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError || !swimmer) {
+    return NextResponse.json({ error: "السباح غير موجود" }, { status: 404 });
+  }
+
+  // حذف السباح — الـ payments والـ enrollment_requests بتتحذف تلقائياً (CASCADE)
+  const { error: deleteError } = await supabaseAdmin
+    .from("swimmers")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    console.error("خطأ في حذف السباح:", deleteError);
+    return NextResponse.json({ error: "حدث خطأ أثناء الحذف" }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: "تم حذف السباح بنجاح" });
+}

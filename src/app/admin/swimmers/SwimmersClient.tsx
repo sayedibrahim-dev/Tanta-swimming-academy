@@ -17,6 +17,7 @@ import {
   X,              // أيقونة إغلاق المودال
   Loader2,        // أيقونة التحميل
   ChevronDown,    // أيقونة القائمة المنسدلة
+  Trash2,         // أيقونة الحذف
 } from "lucide-react";
 
 // استيراد مكوّن الزرار من shadcn/ui
@@ -82,6 +83,12 @@ export default function SwimmersClient({
 
   // رسالة الخطأ في المودال
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // مودال تأكيد حذف السباح
+  const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
+
+  // حالة التحميل أثناء الحذف
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ==========================================
   // حساب الإحصائيات
@@ -181,6 +188,31 @@ export default function SwimmersClient({
     );
 
     closeReassign(); // إغلاق المودال بعد النجاح
+  }
+
+  // ==========================================
+  // تنفيذ حذف السباح — يرسل DELETE للـ API
+  // ==========================================
+  async function handleDelete() {
+    if (!deleteModal) return;
+
+    setIsDeleting(true);
+
+    const res = await fetch(`/api/admin/swimmers/${deleteModal.id}`, {
+      method: "DELETE",
+    });
+
+    setIsDeleting(false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "حدث خطأ أثناء الحذف");
+      return;
+    }
+
+    // إزالة السباح من القائمة بدون reload
+    setSwimmers((prev) => prev.filter((s) => s.id !== deleteModal.id));
+    setDeleteModal(null);
   }
 
   // ==========================================
@@ -452,15 +484,28 @@ export default function SwimmersClient({
                 )}
               </div>
 
-              {/* زر إعادة التعيين */}
-              <button
-                onClick={() => openReassign(swimmer)} // فتح المودال لهذا السباح
-                className="w-full mt-auto flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
-                style={{ background: "var(--cyan-muted)", color: "var(--cyan)" }}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                إعادة التعيين
-              </button>
+              {/* أزرار الإجراءات */}
+              <div className="flex gap-2 mt-auto">
+                {/* زر إعادة التعيين */}
+                <button
+                  onClick={() => openReassign(swimmer)}
+                  className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
+                  style={{ background: "var(--cyan-muted)", color: "var(--cyan)" }}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  إعادة التعيين
+                </button>
+
+                {/* زر الحذف */}
+                <button
+                  onClick={() => setDeleteModal({ id: swimmer.id, name: swimmer.name })}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:opacity-90 flex-shrink-0"
+                  style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "var(--destructive)" }}
+                  title="حذف السباح"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           );
         })}
@@ -469,6 +514,69 @@ export default function SwimmersClient({
       {/* ==========================================
           مودال إعادة التعيين
           ========================================== */}
+      {/* ==========================================
+          مودال تأكيد حذف السباح
+          ========================================== */}
+      {deleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)" }}
+          onClick={() => setDeleteModal(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 space-y-4"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* رأس المودال */}
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "oklch(0.65 0.22 25 / 15%)" }}
+              >
+                <Trash2 className="w-5 h-5" style={{ color: "var(--destructive)" }} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">حذف السباح</h2>
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  {deleteModal.name}
+                </p>
+              </div>
+            </div>
+
+            {/* تحذير */}
+            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+              سيتم حذف السباح وجميع بياناته (المدفوعات، طلبات الالتحاق) نهائياً.
+              <span className="text-white font-medium"> هذا الإجراء لا يمكن التراجع عنه.</span>
+            </p>
+
+            {/* أزرار */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDeleteModal(null)}
+                disabled={isDeleting}
+                style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+              >
+                إلغاء
+              </Button>
+              <Button
+                className="flex-1 font-semibold"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                style={{ background: "var(--destructive)", color: "white" }}
+              >
+                {isDeleting
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : "تأكيد الحذف"
+                }
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {reassignSwimmer && (
         // خلفية شفافة داكنة خلف المودال
         <div
