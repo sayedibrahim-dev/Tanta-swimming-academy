@@ -75,7 +75,7 @@ export async function POST(
 
           <div style="text-align:center;margin-bottom:32px;">
             <p style="font-size:22px;font-weight:900;color:white;margin:0 0 4px;">أكاديمية طنطا للسباحة</p>
-            <p style="font-size:12px;color:rgba(212,175,55,0.85);margin:0;letter-spacing:0.1em;">TANAT SWIMMING ACADEMY</p>
+            <p style="font-size:12px;color:rgba(212,175,55,0.85);margin:0;letter-spacing:0.1em;">TANTA SWIMMING ACADEMY</p>
           </div>
 
           <div style="height:1px;background:linear-gradient(to left,transparent,rgba(212,175,55,0.4),transparent);margin-bottom:32px;"></div>

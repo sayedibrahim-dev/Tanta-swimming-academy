@@ -576,7 +576,7 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
                 <Label className="text-white">البريد الإلكتروني</Label>
                 <Input
                   type="email"
-                  placeholder="مثال: coach@tanat.com"
+                  placeholder="مثال: coach@tanta.com"
                   value={form.email}
                   onChange={(e) => updateForm("email", e.target.value)} // تحديث حقل الإيميل
                   className="bg-secondary border-border text-white placeholder:text-muted-foreground"
@@ -811,7 +811,7 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
                   type="email"
                   value={editModal.email}
                   onChange={(e) => setEditModal((prev) => prev ? { ...prev, email: e.target.value } : prev)}
-                  placeholder="مثال: coach@tanat.com"
+                  placeholder="مثال: coach@tanta.com"
                   className="bg-secondary border-border text-white placeholder:text-muted-foreground"
                   style={{ direction: "ltr", textAlign: "left" }}
                 />

@@ -113,7 +113,7 @@ export async function POST(
               أكاديمية طنطا للسباحة
             </p>
             <p style="font-size: 12px; color: rgba(212,175,55,0.85); margin: 0; letter-spacing: 0.1em;">
-              TANAT SWIMMING ACADEMY
+              TANTA SWIMMING ACADEMY
             </p>
           </div>
 
