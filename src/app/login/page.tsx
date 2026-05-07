@@ -431,9 +431,26 @@ function LoginForm() {
 
           </form>
 
-          {/* رابط إنشاء حساب */}
-          <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
-            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.45)" }}>
+          {/* روابط أسفل الفورم */}
+          <div style={{ marginTop: "1.5rem", textAlign: "center", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+
+            {/* نسيت كلمة المرور */}
+            <a
+              href="/forgot-password"
+              style={{
+                fontSize:       "0.85rem",
+                color:          "rgba(255,255,255,0.4)",
+                textDecoration: "none",
+                transition:     "color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = GOLD)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
+            >
+              نسيت كلمة المرور؟
+            </a>
+
+            {/* إنشاء حساب */}
+            <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>
               ولي أمر جديد؟{" "}
               <a
                 href="/register"
