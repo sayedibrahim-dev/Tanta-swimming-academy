@@ -170,6 +170,23 @@ VALUES ('payment-receipts', 'payment-receipts', false)
 ON CONFLICT DO NOTHING;
 
 -- ==========================================
+-- جدول توكنات إعادة تعيين كلمة المرور
+-- ينشأ التوكن عند طلب الأدمن، ويُحذف فور استخدامه أو انتهائه
+-- ==========================================
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token      TEXT        NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index للبحث السريع بالتوكن عند التحقق منه
+CREATE INDEX IF NOT EXISTS idx_reset_tokens_token   ON password_reset_tokens(token);
+-- Index لتنظيف التوكنات المنتهية الصلاحية
+CREATE INDEX IF NOT EXISTS idx_reset_tokens_expires ON password_reset_tokens(expires_at);
+
+-- ==========================================
 -- Row Level Security (RLS) - قواعد أمان البيانات
 -- تمنع المستخدمين من الوصول لبيانات بعضهم
 -- ==========================================

@@ -1,86 +1,48 @@
 "use client";
 
-// استيراد useState لإدارة الحالة التفاعلية
 import { useState } from "react";
-
-// استيراد الأيقونات المستخدمة
 import {
-  User,          // أيقونة ولي الأمر
-  Phone,         // أيقونة التليفون
-  Mail,          // أيقونة الإيميل
-  Users,         // أيقونة عدد الأبناء
-  KeyRound,      // أيقونة كلمة المرور
-  X,             // أيقونة إغلاق الـ modal
-  Loader2,       // أيقونة التحميل
-  Eye,           // أيقونة إظهار الباسورد
-  EyeOff,        // أيقونة إخفاء الباسورد
-  CheckCircle2,  // أيقونة النجاح
-  Copy,          // أيقونة النسخ
+  User,
+  Phone,
+  Mail,
+  Users,
+  Send,
+  X,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
-
-// استيراد مكونات shadcn/ui
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-// استيراد نوع بيانات ولي الأمر من صفحة السيرفر
 import type { ParentItem } from "./page";
 
-// ==========================================
-// Props المكوّن الرئيسي
-// ==========================================
 interface ParentsClientProps {
-  initialParents: ParentItem[]; // قائمة أولياء الأمور من السيرفر
+  initialParents: ParentItem[];
 }
 
-// ==========================================
-// المكوّن الرئيسي
-// ==========================================
 export default function ParentsClient({ initialParents }: ParentsClientProps) {
-
-  // قائمة أولياء الأمور — ثابتة (مفيش إضافة أو حذف من هنا)
   const parents = initialParents;
 
-  // حالة modal إعادة تعيين كلمة المرور
-  const [resetModal, setResetModal] = useState<{
-    parentId: string; // معرف ولي الأمر
-    name: string;     // اسمه للعرض في الـ modal
-    email: string;    // إيميله للعرض (عشان الأدمن يبعتهوله)
+  // ==========================================
+  // Modal تأكيد الإرسال — فقط لتأكيد العملية قبل الإرسال
+  // لا يحتوي على أي حقل كلمة مرور
+  // ==========================================
+  const [confirmModal, setConfirmModal] = useState<{
+    parentId: string;
+    name:     string;
+    email:    string;
   } | null>(null);
 
-  // كلمة المرور الجديدة اللي بيكتبها الأدمن
-  const [newPassword, setNewPassword] = useState("");
+  const [sending,    setSending]    = useState(false);
+  const [sendError,  setSendError]  = useState<string | null>(null);
 
-  // إظهار أو إخفاء كلمة المرور
-  const [showPassword, setShowPassword] = useState(false);
-
-  // حالة التحميل أثناء الإرسال
-  const [submitting, setSubmitting] = useState(false);
-
-  // رسالة الخطأ
-  const [resetError, setResetError] = useState<string | null>(null);
-
-  // modal النجاح — بيعرض كلمة المرور الجديدة مرة واحدة للأدمن
-  const [successModal, setSuccessModal] = useState<{
-    name: string;     // اسم ولي الأمر
-    email: string;    // إيميله
-    password: string; // كلمة المرور الجديدة
-  } | null>(null);
-
-  // حالة نسخ كلمة المرور في modal النجاح
-  const [copied, setCopied] = useState(false);
-
-  // إظهار/إخفاء كلمة المرور في modal النجاح
-  const [showSuccessPassword, setShowSuccessPassword] = useState(false);
+  // Modal النجاح — يظهر بعد إرسال الرابط
+  const [successEmail, setSuccessEmail] = useState<string | null>(null);
 
   // ==========================================
-  // دالة فتح modal إعادة التعيين
+  // فتح modal التأكيد
   // ==========================================
-  const openResetModal = (parent: ParentItem) => {
-    setNewPassword("");     // مسح أي كلمة مرور سابقة
-    setShowPassword(false); // إخفاء الباسورد افتراضياً
-    setResetError(null);    // مسح الأخطاء
-    setResetModal({
+  const openConfirm = (parent: ParentItem) => {
+    setSendError(null);
+    setConfirmModal({
       parentId: parent.id,
       name:     parent.name,
       email:    parent.user?.email ?? "",
@@ -88,56 +50,31 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
   };
 
   // ==========================================
-  // دالة نسخ كلمة المرور للـ clipboard
+  // إرسال طلب الرابط للـ API
   // ==========================================
-  const copyPassword = async (password: string) => {
-    await navigator.clipboard.writeText(password); // نسخ للـ clipboard
-    setCopied(true);                                // تفعيل حالة "تم النسخ"
-    setTimeout(() => setCopied(false), 2000);       // إعادة الحالة بعد ثانيتين
-  };
+  const handleSendReset = async () => {
+    if (!confirmModal) return;
 
-  // ==========================================
-  // دالة إرسال طلب إعادة تعيين كلمة المرور
-  // ==========================================
-  const handleReset = async () => {
-    if (!resetModal) return;
+    setSending(true);
+    setSendError(null);
 
-    // التحقق من إدخال كلمة مرور
-    if (!newPassword.trim()) {
-      setResetError("يرجى إدخال كلمة المرور الجديدة");
-      return;
-    }
+    const res = await fetch(
+      `/api/admin/parents/${confirmModal.parentId}/send-reset`,
+      { method: "POST" }
+    );
 
-    setSubmitting(true); // تفعيل حالة التحميل
-    setResetError(null); // مسح الأخطاء
+    setSending(false);
 
-    // إرسال طلب إعادة التعيين للـ API
-    const res = await fetch(`/api/admin/parents/${resetModal.parentId}/reset-password`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newPassword: newPassword.trim() }), // إرسال كلمة المرور الجديدة
-    });
-
-    setSubmitting(false); // إيقاف حالة التحميل
-
-    // لو فيه خطأ — عرض رسالة الخطأ
     if (!res.ok) {
       const data = await res.json();
-      setResetError(data.error ?? "حدث خطأ أثناء إعادة التعيين");
+      setSendError(data.error ?? "حدث خطأ، حاول مرة أخرى");
       return;
     }
 
-    // نجاح — أغلق modal الإدخال وافتح modal النجاح
-    const savedPassword = newPassword.trim(); // احفظ كلمة المرور قبل مسحها
-    setResetModal(null);                       // إغلاق modal الإدخال
-    setNewPassword("");                         // مسح الحقل
-    setShowSuccessPassword(false);             // إخفاء الباسورد افتراضياً
-    setCopied(false);                           // إعادة حالة النسخ
-    setSuccessModal({
-      name:     resetModal.name,
-      email:    resetModal.email,
-      password: savedPassword, // كلمة المرور الجديدة للعرض للأدمن
-    });
+    // نجح — أغلق modal التأكيد وافتح modal النجاح
+    const savedEmail = confirmModal.email;
+    setConfirmModal(null);
+    setSuccessEmail(savedEmail);
   };
 
   // ==========================================
@@ -172,13 +109,9 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
         إجمالي أولياء الأمور: <span className="text-white font-semibold">{parents.length}</span>
       </p>
 
-      {/* ==========================================
-          شبكة بطاقات أولياء الأمور
-          ========================================== */}
+      {/* شبكة البطاقات */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {parents.map((parent) => {
-
-          // عدد أبناء ولي الأمر
           const swimmerCount = parent.swimmers?.length ?? 0;
 
           return (
@@ -187,7 +120,7 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
               className="rounded-2xl p-5 border flex flex-col gap-4"
               style={{ background: "var(--card)", borderColor: "var(--border)" }}
             >
-              {/* رأس البطاقة — الأيقونة والاسم */}
+              {/* رأس البطاقة */}
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -196,9 +129,7 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
                   <User className="w-5 h-5" style={{ color: "var(--cyan)" }} />
                 </div>
                 <div className="min-w-0">
-                  {/* اسم ولي الأمر */}
                   <p className="font-semibold text-white truncate">{parent.name}</p>
-                  {/* عدد الأبناء */}
                   <span
                     className="text-xs px-2 py-0.5 rounded-full"
                     style={{ background: "var(--cyan-muted)", color: "var(--cyan)" }}
@@ -208,48 +139,27 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
                 </div>
               </div>
 
-              {/* تفاصيل ولي الأمر */}
+              {/* التفاصيل */}
               <div className="space-y-2">
-
-                {/* الإيميل */}
                 {parent.user?.email && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Mail
-                      className="w-3.5 h-3.5 flex-shrink-0"
-                      style={{ color: "var(--muted-foreground)" }}
-                    />
-                    <span
-                      className="truncate font-mono text-xs"
-                      style={{ color: "var(--muted-foreground)", direction: "ltr" }}
-                    >
+                    <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
+                    <span className="truncate font-mono text-xs" style={{ color: "var(--muted-foreground)", direction: "ltr" }}>
                       {parent.user.email}
                     </span>
                   </div>
                 )}
-
-                {/* التليفون */}
                 {parent.phone && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Phone
-                      className="w-3.5 h-3.5 flex-shrink-0"
-                      style={{ color: "var(--muted-foreground)" }}
-                    />
-                    <span
-                      className="font-mono text-xs"
-                      style={{ color: "var(--muted-foreground)", direction: "ltr" }}
-                    >
+                    <Phone className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
+                    <span className="font-mono text-xs" style={{ color: "var(--muted-foreground)", direction: "ltr" }}>
                       {parent.phone}
                     </span>
                   </div>
                 )}
-
-                {/* أسماء الأبناء */}
                 {swimmerCount > 0 && (
                   <div className="flex items-start gap-2 text-sm">
-                    <Users
-                      className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
-                      style={{ color: "var(--muted-foreground)" }}
-                    />
+                    <Users className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: "var(--muted-foreground)" }} />
                     <span style={{ color: "var(--muted-foreground)" }} className="text-xs">
                       {parent.swimmers.map((s) => s.name).join("، ")}
                     </span>
@@ -257,14 +167,21 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
                 )}
               </div>
 
-              {/* زرار إعادة تعيين كلمة المرور */}
+              {/* ==========================================
+                  الزرار — إرسال رابط بريد إلكتروني
+                  لا يوجد حقل كلمة مرور هنا على الإطلاق
+                  ========================================== */}
               <button
-                onClick={() => openResetModal(parent)}
+                onClick={() => openConfirm(parent)}
                 className="mt-auto flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
-                style={{ background: "var(--gold-muted)", color: "var(--gold)", border: "1px solid oklch(0.85 0.16 85 / 30%)" }}
+                style={{
+                  background: "var(--gold-muted)",
+                  color:      "var(--gold)",
+                  border:     "1px solid oklch(0.85 0.16 85 / 30%)",
+                }}
               >
-                <KeyRound className="w-3.5 h-3.5" />
-                إعادة تعيين كلمة المرور
+                <Send className="w-3.5 h-3.5" />
+                إرسال رابط إعادة كلمة المرور
               </button>
             </div>
           );
@@ -272,13 +189,13 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
       </div>
 
       {/* ==========================================
-          Modal إعادة تعيين كلمة المرور
+          Modal التأكيد — فقط تأكيد، لا يوجد إدخال
           ========================================== */}
-      {resetModal && (
+      {confirmModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "oklch(0 0 0 / 70%)" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setResetModal(null); }}
+          onClick={(e) => { if (e.target === e.currentTarget && !sending) setConfirmModal(null); }}
         >
           <div
             className="w-full max-w-md rounded-2xl p-6"
@@ -287,84 +204,67 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
             {/* رأس الـ modal */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <KeyRound className="w-5 h-5" style={{ color: "var(--gold)" }} />
-                <h2 className="text-lg font-semibold text-white">إعادة تعيين كلمة المرور</h2>
+                <Send className="w-5 h-5" style={{ color: "var(--gold)" }} />
+                <h2 className="text-lg font-semibold text-white">إرسال رابط إعادة كلمة المرور</h2>
               </div>
-              {/* زرار إغلاق */}
               <button
-                onClick={() => setResetModal(null)}
+                onClick={() => { if (!sending) setConfirmModal(null); }}
                 className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
               >
                 <X className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
               </button>
             </div>
 
-            {/* اسم ولي الأمر */}
-            <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-              تعيين كلمة مرور جديدة لـ
-              <span className="text-white font-semibold mx-1">{resetModal.name}</span>
-            </p>
-
-            {/* حقل كلمة المرور الجديدة */}
-            <div className="space-y-1.5 mb-4">
-              <Label className="text-white">كلمة المرور الجديدة</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)} // تحديث كلمة المرور عند الكتابة
-                  placeholder="8 أحرف على الأقل"
-                  className="bg-secondary border-border text-white placeholder:text-muted-foreground pr-10"
-                />
-                {/* زرار إظهار/إخفاء كلمة المرور */}
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
-                  {showPassword
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />
-                  }
-                </button>
-              </div>
+            {/* رسالة التأكيد */}
+            <div
+              className="rounded-xl p-4 mb-5"
+              style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}
+            >
+              <p className="text-sm text-white mb-1 font-medium">{confirmModal.name}</p>
+              <p className="text-xs font-mono" style={{ color: "var(--muted-foreground)", direction: "ltr" }}>
+                {confirmModal.email}
+              </p>
             </div>
 
+            <p className="text-sm mb-5" style={{ color: "var(--muted-foreground)" }}>
+              سيصل رابط لبريده الإلكتروني يمكّنه من تعيين كلمة مرور جديدة بنفسه.
+              الرابط صالح لمدة <span className="text-white font-semibold">ساعة واحدة</span> فقط.
+            </p>
+
             {/* رسالة الخطأ */}
-            {resetError && (
+            {sendError && (
               <p
                 className="text-sm rounded-lg p-3 mb-4"
                 style={{
                   background: "oklch(0.65 0.22 25 / 15%)",
-                  color: "oklch(0.65 0.22 25)",
-                  border: "1px solid oklch(0.65 0.22 25 / 30%)",
+                  color:      "oklch(0.65 0.22 25)",
+                  border:     "1px solid oklch(0.65 0.22 25 / 30%)",
                 }}
               >
-                {resetError}
+                {sendError}
               </p>
             )}
 
-            {/* أزرار الحفظ والإلغاء */}
+            {/* الأزرار */}
             <div className="flex gap-3">
               <Button
-                onClick={handleReset}
-                disabled={submitting}
+                onClick={handleSendReset}
+                disabled={sending}
                 className="flex-1 font-semibold h-10"
                 style={{
                   background: "var(--gold-muted)",
-                  color: "var(--gold)",
-                  border: "1px solid oklch(0.85 0.16 85 / 40%)",
+                  color:      "var(--gold)",
+                  border:     "1px solid oklch(0.85 0.16 85 / 40%)",
                 }}
               >
-                {submitting
+                {sending
                   ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : "حفظ كلمة المرور الجديدة"
+                  : <><Send className="w-4 h-4 ml-1.5" /> إرسال الرابط</>
                 }
               </Button>
               <Button
-                onClick={() => setResetModal(null)}
-                disabled={submitting}
+                onClick={() => setConfirmModal(null)}
+                disabled={sending}
                 variant="ghost"
                 className="flex-1 h-10"
                 style={{ background: "var(--secondary)", color: "var(--muted-foreground)" }}
@@ -377,104 +277,46 @@ export default function ParentsClient({ initialParents }: ParentsClientProps) {
       )}
 
       {/* ==========================================
-          Modal النجاح — عرض كلمة المرور الجديدة للأدمن
+          Modal النجاح — تأكيد الإرسال
           ========================================== */}
-      {successModal && (
-        // الخلفية مش قابلة للإغلاق — عشان الأدمن يأخد كلمة المرور الأول
+      {successEmail && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "oklch(0 0 0 / 70%)" }}
         >
           <div
-            className="w-full max-w-md rounded-2xl p-6"
+            className="w-full max-w-md rounded-2xl p-6 text-center"
             style={{ background: "var(--card)", border: "1px solid var(--border)" }}
           >
-            {/* رأس الـ modal */}
-            <div className="flex items-center gap-3 mb-5">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "oklch(0.65 0.18 145 / 15%)" }}
-              >
-                <CheckCircle2 className="w-5 h-5" style={{ color: "oklch(0.72 0.2 145)" }} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">تم إعادة التعيين بنجاح</h2>
-                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                  {successModal.name}
-                </p>
-              </div>
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ background: "oklch(0.65 0.18 145 / 15%)" }}
+            >
+              <CheckCircle2 className="w-7 h-7" style={{ color: "oklch(0.72 0.2 145)" }} />
             </div>
 
-            {/* تعليمات للأدمن */}
-            <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-              ابعت بيانات الدخول دي لولي الأمر عبر التليفون أو الواتساب
+            <h2 className="text-lg font-bold text-white mb-2">تم إرسال الرابط!</h2>
+
+            <p className="text-sm mb-1" style={{ color: "var(--muted-foreground)" }}>
+              تم إرسال رابط إعادة تعيين كلمة المرور إلى
+            </p>
+            <p
+              className="text-sm font-mono font-semibold mb-4"
+              style={{ color: "var(--cyan)", direction: "ltr" }}
+            >
+              {successEmail}
             </p>
 
-            {/* بيانات الدخول */}
-            <div
-              className="rounded-xl p-4 space-y-3 mb-5"
-              style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}
-            >
-              {/* الإيميل */}
-              <div>
-                <p className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>
-                  البريد الإلكتروني
-                </p>
-                <p className="text-sm font-mono text-white" style={{ direction: "ltr" }}>
-                  {successModal.email}
-                </p>
-              </div>
+            <p className="text-xs mb-5" style={{ color: "var(--muted-foreground)" }}>
+              الرابط صالح لمدة ساعة — إذا لم يجده في الوارد يبحث في Spam
+            </p>
 
-              {/* كلمة المرور الجديدة */}
-              <div>
-                <p className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>
-                  كلمة المرور الجديدة
-                </p>
-                <div className="flex items-center gap-2">
-                  {/* كلمة المرور — مخفية أو ظاهرة حسب الحالة */}
-                  <p
-                    className="flex-1 text-sm font-mono"
-                    style={{ color: "var(--gold)", direction: "ltr" }}
-                  >
-                    {showSuccessPassword
-                      ? successModal.password                              // عرض كنص عادي
-                      : "•".repeat(successModal.password.length)          // إخفاء بنقاط
-                    }
-                  </p>
-
-                  {/* زرار إظهار/إخفاء */}
-                  <button
-                    onClick={() => setShowSuccessPassword((p) => !p)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/5"
-                  >
-                    {showSuccessPassword
-                      ? <EyeOff className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-                      : <Eye    className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-                    }
-                  </button>
-
-                  {/* زرار النسخ */}
-                  <button
-                    onClick={() => copyPassword(successModal.password)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/5"
-                    title="نسخ كلمة المرور"
-                  >
-                    {copied
-                      ? <CheckCircle2 className="w-4 h-4" style={{ color: "oklch(0.72 0.2 145)" }} />
-                      : <Copy         className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-                    }
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* زرار إغلاق modal النجاح */}
             <Button
-              onClick={() => setSuccessModal(null)}
+              onClick={() => setSuccessEmail(null)}
               className="w-full font-semibold h-10"
               style={{ background: "var(--cyan)", color: "var(--cyan-foreground)" }}
             >
-              حفظت البيانات، إغلاق
+              حسناً
             </Button>
           </div>
         </div>
