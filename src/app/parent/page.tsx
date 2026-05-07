@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { Users, CreditCard, Clock, BellRing, ArrowLeft, UserPlus, CheckCircle2, Sparkles } from "lucide-react";
+import { Users, CreditCard, Clock, BellRing, ArrowLeft, UserPlus, Sparkles } from "lucide-react";
 import { simulatedNow } from "@/lib/now";
 
 // ==========================================
