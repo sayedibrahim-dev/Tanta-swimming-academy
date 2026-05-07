@@ -8,6 +8,7 @@ import { useState } from "react";
 import {
   UserPlus,      // أيقونة إضافة مدرب جديد
   Trash2,        // أيقونة حذف المدرب
+  Pencil,        // أيقونة تعديل بيانات المدرب
   GraduationCap, // أيقونة المدرب (الحالة الفارغة)
   X,             // أيقونة إغلاق الـ modal
   Loader2,       // أيقونة التحميل الدوارة
@@ -83,6 +84,17 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
     name: string;     // اسم المدرب للعرض في الـ modal
     swimmerCount: number; // عدد سباحيه (للتحذير)
   } | null>(null);
+
+  // حالة modal تعديل المدرب — null = مغلق، object = مفتوح مع بيانات المدرب الحالية
+  const [editModal, setEditModal] = useState<{
+    coachId: string; // معرف المدرب للتحديث
+    name: string;    // الاسم الحالي
+    phone: string;   // التليفون الحالي
+    email: string;   // الإيميل الحالي
+  } | null>(null);
+
+  // رسالة الخطأ في modal التعديل
+  const [editError, setEditError] = useState<string | null>(null);
 
   // حالة التحميل أثناء إرسال الفورم أو الحذف
   const [submitting, setSubmitting] = useState(false);
@@ -219,6 +231,71 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
     setDeleteModal(null); // إغلاق الـ modal
   };
 
+  // ==========================================
+  // دالة فتح modal التعديل وتعبئة بيانات المدرب الحالية
+  // ==========================================
+  const openEditModal = (coach: CoachItem) => {
+    setEditError(null); // مسح أي خطأ سابق
+    setEditModal({
+      coachId: coach.id,
+      name:    coach.name,                 // الاسم الحالي
+      phone:   coach.phone ?? "",           // التليفون الحالي (أو فارغ)
+      email:   coach.user?.email ?? "",     // الإيميل الحالي (أو فارغ)
+    });
+  };
+
+  // ==========================================
+  // دالة إرسال تعديل بيانات المدرب للـ API
+  // ==========================================
+  const handleEdit = async () => {
+    if (!editModal) return; // لو الـ modal مش مفتوح — اخرج
+
+    // التحقق من ملء الحقول الأساسية
+    if (!editModal.name.trim() || !editModal.phone.trim() || !editModal.email.trim()) {
+      setEditError("يرجى ملء جميع الحقول");
+      return;
+    }
+
+    setSubmitting(true); // تفعيل حالة التحميل
+    setEditError(null);  // مسح الخطأ
+
+    // إرسال بيانات التعديل للـ API
+    const res = await fetch(`/api/admin/coaches/${editModal.coachId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name:  editModal.name.trim(),  // الاسم المعدّل
+        phone: editModal.phone.trim(), // التليفون المعدّل
+        email: editModal.email.trim(), // الإيميل المعدّل
+      }),
+    });
+
+    setSubmitting(false); // إيقاف حالة التحميل
+
+    // لو فيه خطأ — عرض رسالة الخطأ
+    if (!res.ok) {
+      const data = await res.json();
+      setEditError(data.error ?? "حدث خطأ أثناء التحديث");
+      return;
+    }
+
+    // تحديث بيانات المدرب في القائمة المحلية بدون reload
+    setCoaches((prev) =>
+      prev.map((c) =>
+        c.id === editModal.coachId
+          ? {
+              ...c,
+              name:  editModal.name.trim(),                      // الاسم الجديد
+              phone: editModal.phone.trim(),                     // التليفون الجديد
+              user:  { ...c.user, email: editModal.email.trim() }, // الإيميل الجديد
+            }
+          : c
+      )
+    );
+
+    setEditModal(null); // إغلاق الـ modal بعد النجاح
+  };
+
   return (
     <>
       {/* ==========================================
@@ -306,14 +383,27 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
                     </div>
                   </div>
 
-                  {/* زرار الحذف */}
-                  <button
-                    onClick={() => openDeleteModal(coach)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors flex-shrink-0"
-                    title="حذف المدرب"
-                  >
-                    <Trash2 className="w-4 h-4" style={{ color: "var(--destructive)" }} />
-                  </button>
+                  {/* أزرار التعديل والحذف */}
+                  <div className="flex items-center gap-1">
+
+                    {/* زرار التعديل */}
+                    <button
+                      onClick={() => openEditModal(coach)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors flex-shrink-0"
+                      title="تعديل بيانات المدرب"
+                    >
+                      <Pencil className="w-4 h-4" style={{ color: "var(--cyan)" }} />
+                    </button>
+
+                    {/* زرار الحذف */}
+                    <button
+                      onClick={() => openDeleteModal(coach)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors flex-shrink-0"
+                      title="حذف المدرب"
+                    >
+                      <Trash2 className="w-4 h-4" style={{ color: "var(--destructive)" }} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* تفاصيل المدرب */}
@@ -588,6 +678,115 @@ export default function CoachesClient({ initialCoaches }: CoachesClientProps) {
             >
               حفظت البيانات، إغلاق
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          Modal تعديل بيانات المدرب
+          ========================================== */}
+      {editModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "oklch(0 0 0 / 70%)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setEditModal(null); }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            {/* رأس الـ modal */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5" style={{ color: "var(--cyan)" }} />
+                <h2 className="text-lg font-semibold text-white">تعديل بيانات المدرب</h2>
+              </div>
+              {/* زرار إغلاق الـ modal */}
+              <button
+                onClick={() => setEditModal(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
+              >
+                <X className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
+              </button>
+            </div>
+
+            {/* حقول الفورم */}
+            <div className="space-y-4">
+
+              {/* حقل الاسم */}
+              <div className="space-y-1.5">
+                <Label className="text-white">الاسم الكامل</Label>
+                <Input
+                  value={editModal.name}
+                  onChange={(e) => setEditModal((prev) => prev ? { ...prev, name: e.target.value } : prev)}
+                  placeholder="مثال: أحمد محمد"
+                  className="bg-secondary border-border text-white placeholder:text-muted-foreground"
+                />
+              </div>
+
+              {/* حقل التليفون */}
+              <div className="space-y-1.5">
+                <Label className="text-white">رقم التليفون</Label>
+                <Input
+                  value={editModal.phone}
+                  onChange={(e) => setEditModal((prev) => prev ? { ...prev, phone: e.target.value } : prev)}
+                  placeholder="مثال: 01012345678"
+                  className="bg-secondary border-border text-white placeholder:text-muted-foreground"
+                  style={{ direction: "ltr", textAlign: "left" }}
+                />
+              </div>
+
+              {/* حقل الإيميل */}
+              <div className="space-y-1.5">
+                <Label className="text-white">البريد الإلكتروني</Label>
+                <Input
+                  type="email"
+                  value={editModal.email}
+                  onChange={(e) => setEditModal((prev) => prev ? { ...prev, email: e.target.value } : prev)}
+                  placeholder="مثال: coach@tanat.com"
+                  className="bg-secondary border-border text-white placeholder:text-muted-foreground"
+                  style={{ direction: "ltr", textAlign: "left" }}
+                />
+              </div>
+
+              {/* رسالة الخطأ */}
+              {editError && (
+                <p
+                  className="text-sm rounded-lg p-3"
+                  style={{
+                    background: "oklch(0.65 0.22 25 / 15%)",
+                    color: "oklch(0.65 0.22 25)",
+                    border: "1px solid oklch(0.65 0.22 25 / 30%)",
+                  }}
+                >
+                  {editError}
+                </p>
+              )}
+
+              {/* أزرار الحفظ والإلغاء */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleEdit}
+                  disabled={submitting}
+                  className="flex-1 font-semibold h-10"
+                  style={{ background: "var(--cyan)", color: "var(--cyan-foreground)" }}
+                >
+                  {submitting
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : "حفظ التعديلات"
+                  }
+                </Button>
+                <Button
+                  onClick={() => setEditModal(null)}
+                  disabled={submitting}
+                  variant="ghost"
+                  className="flex-1 h-10"
+                  style={{ background: "var(--secondary)", color: "var(--muted-foreground)" }}
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
