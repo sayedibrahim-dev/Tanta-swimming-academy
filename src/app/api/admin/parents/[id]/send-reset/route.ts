@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { resend, FROM_EMAIL } from "@/lib/resend";
+import { getResendClient, FROM_EMAIL } from "@/lib/resend";
 import crypto from "crypto";
 
 // مدة صلاحية التوكن — ساعة واحدة
@@ -80,7 +80,7 @@ export async function POST(
   // ==========================================
   // إرسال الإيميل عبر Resend
   // ==========================================
-  const { error: emailError } = await resend.emails.send({
+  const { error: emailError } = await getResendClient().emails.send({
     from:    FROM_EMAIL,
     to:      email,
     subject: "إعادة تعيين كلمة مرور — أكاديمية طنطا للسباحة",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { resend, FROM_EMAIL } from "@/lib/resend";
+import { getResendClient, FROM_EMAIL } from "@/lib/resend";
 import crypto from "crypto";
 
 const TOKEN_EXPIRY_MS = 60 * 60 * 1000; // ساعة واحدة
@@ -62,7 +62,7 @@ export async function POST(
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
   // إرسال الإيميل
-  const { error: emailError } = await resend.emails.send({
+  const { error: emailError } = await getResendClient().emails.send({
     from:    FROM_EMAIL,
     to:      email,
     subject: "إعادة تعيين كلمة مرور — أكاديمية طنطا للسباحة",
