@@ -103,12 +103,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "فشل رفع الصورة" }, { status: 500 });
   }
 
-  // الحصول على الرابط العام للصورة المرفوعة
-  const { data: urlData } = supabaseAdmin
+  // ==========================================
+  // توليد Signed URL صالح لمدة سنة (365 يوم)
+  // أكثر أماناً من Public URL لأن الـ bucket private
+  // ==========================================
+  const { data: signedData, error: signedError } = await supabaseAdmin
     .storage
     .from(bucket)
-    .getPublicUrl(data.path); // data.path هو المسار الكامل للملف في الـ bucket
+    .createSignedUrl(data.path, 60 * 60 * 24 * 365); // صالح سنة كاملة
 
-  // إرجاع الرابط العام للصورة للـ Frontend
-  return NextResponse.json({ url: urlData.publicUrl });
+  if (signedError || !signedData) {
+    console.error("خطأ في توليد رابط الصورة:", signedError);
+    return NextResponse.json({ error: "فشل توليد رابط الصورة" }, { status: 500 });
+  }
+
+  // إرجاع الـ Signed URL للـ Frontend
+  return NextResponse.json({ url: signedData.signedUrl });
 }
