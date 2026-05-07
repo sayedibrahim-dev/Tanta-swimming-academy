@@ -6,6 +6,81 @@ import { supabaseAdmin } from "./supabase";
 import { UserRole } from "./types";
 
 // ==========================================
+// Rate Limiting — الحماية من هجمات Brute Force
+//
+// المنطق:
+// - كل إيميل عنده عداد محاولات فاشلة
+// - بعد MAX_ATTEMPTS فاشلة في WINDOW_MS → يُمنع لـ WINDOW_MS
+// - بعد انتهاء الـ window → العداد يتصفّر تلقائياً
+// - بعد تسجيل دخول ناجح → يُمسح سجل المحاولات
+//
+// ملاحظة: ده in-memory — بيتصفّر لو السيرفر اعاد تشغيل
+// كافي لأكاديمية سباحة صغيرة — مش محتاج Redis
+// ==========================================
+
+const MAX_ATTEMPTS = 5;                 // الحد الأقصى للمحاولات الفاشلة
+const WINDOW_MS    = 15 * 60 * 1000;   // نافذة الوقت: 15 دقيقة بالميلي ثانية
+
+// Map لتخزين سجل المحاولات: key = email، value = { count, firstAttempt }
+const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
+// ==========================================
+// دالة للتحقق من حالة الـ rate limit لإيميل معين
+// ترجع: { blocked: true, remainingMs } لو محظور
+//        { blocked: false } لو لسه مسموح
+// ==========================================
+function checkRateLimit(email: string): { blocked: boolean; remainingMinutes?: number } {
+  const key     = email.toLowerCase(); // نوحّد الـ case
+  const now     = Date.now();          // الوقت الحالي بالميلي ثانية
+  const record  = loginAttempts.get(key);
+
+  // لو مفيش سجل → أول مرة → مسموح
+  if (!record) return { blocked: false };
+
+  // لو انتهت نافذة الـ 15 دقيقة → مسح السجل وإعادة البداية
+  if (now - record.firstAttempt > WINDOW_MS) {
+    loginAttempts.delete(key);
+    return { blocked: false };
+  }
+
+  // لو وصل للحد الأقصى → محظور
+  if (record.count >= MAX_ATTEMPTS) {
+    const remainingMs      = WINDOW_MS - (now - record.firstAttempt); // الوقت المتبقي للحظر
+    const remainingMinutes = Math.ceil(remainingMs / 60000);           // تحويل لدقائق
+    return { blocked: true, remainingMinutes };
+  }
+
+  return { blocked: false };
+}
+
+// ==========================================
+// دالة لتسجيل محاولة فاشلة لإيميل معين
+// ==========================================
+function recordFailedAttempt(email: string): void {
+  const key    = email.toLowerCase();
+  const now    = Date.now();
+  const record = loginAttempts.get(key);
+
+  if (!record) {
+    // أول محاولة فاشلة — ابدأ العداد
+    loginAttempts.set(key, { count: 1, firstAttempt: now });
+  } else if (now - record.firstAttempt > WINDOW_MS) {
+    // انتهت النافذة — صفّر وابدأ من أول
+    loginAttempts.set(key, { count: 1, firstAttempt: now });
+  } else {
+    // ضمن النافذة — زوّد العداد
+    loginAttempts.set(key, { count: record.count + 1, firstAttempt: record.firstAttempt });
+  }
+}
+
+// ==========================================
+// دالة لمسح سجل المحاولات بعد تسجيل دخول ناجح
+// ==========================================
+function clearAttempts(email: string): void {
+  loginAttempts.delete(email.toLowerCase());
+}
+
+// ==========================================
 // getAppSession — يقرأ الـ JWT مباشرة من الـ cookie
 // بديل عن getServerSession لأن NextAuth v4 مش بيتوافق صح مع
 // Next.js 16 اللي بيعامل cookies() كـ async Promise
@@ -67,6 +142,16 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // ==========================================
+        // فحص الـ Rate Limit قبل أي عملية
+        // لو الإيميل محظور → ارفض الدخول فوراً
+        // ==========================================
+        const rateCheck = checkRateLimit(credentials.email);
+        if (rateCheck.blocked) {
+          // رسالة الخطأ بتظهر في صفحة Login
+          throw new Error(`RATE_LIMITED:${rateCheck.remainingMinutes}`);
+        }
+
         // البحث عن المستخدم في قاعدة البيانات بالإيميل
         // maybeSingle بدل single — لأن عدم الوجود طبيعي (بريد خاطئ)
         // single() بيرمي PGRST116 error في الـ logs عند كل محاولة دخول بإيميل غير موجود
@@ -77,7 +162,8 @@ export const authOptions: NextAuthOptions = {
           .maybeSingle();
 
         if (!user) {
-          // المستخدم غير موجود
+          // المستخدم غير موجود → سجّل محاولة فاشلة
+          recordFailedAttempt(credentials.email);
           return null;
         }
 
@@ -89,8 +175,13 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isPasswordValid) {
+          // كلمة المرور غلط → سجّل محاولة فاشلة
+          recordFailedAttempt(credentials.email);
           return null;
         }
+
+        // تسجيل دخول ناجح → امسح سجل المحاولات الفاشلة
+        clearAttempts(credentials.email);
 
         // جلب الـ profileId حسب دور المستخدم
         let profileId = "";

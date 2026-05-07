@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldAlert } from "lucide-react";
 import { useSearchParams } from "next/navigation"; // لقراءة query params من الـ URL
 
 // ==========================================
@@ -67,7 +67,8 @@ function RegisteredBanner() {
 // صفحة تسجيل الدخول — Luxury Imperial Navy & Gold
 // ==========================================
 function LoginForm() {
-  const [error, setError] = useState<string | null>(null); // رسالة الخطأ
+  const [error,     setError]     = useState<string | null>(null); // رسالة الخطأ العادية
+  const [rateLocked, setRateLocked] = useState(false);             // هل الحساب محظور مؤقتاً؟
 
   const {
     register,
@@ -79,7 +80,9 @@ function LoginForm() {
   // دالة تسجيل الدخول
   // ==========================================
   const onSubmit = async (data: LoginFormData) => {
+    // مسح الأخطاء السابقة عند كل محاولة جديدة
     setError(null);
+    setRateLocked(false);
 
     try {
       // استدعاء NextAuth للتحقق من الكريدنشيالز
@@ -89,15 +92,29 @@ function LoginForm() {
         redirect: false,
       });
 
-
       // فشل التحقق من السيرفر
       if (!result) {
         setError("لا يوجد رد من الخادم، حاول مجدداً");
         return;
       }
 
-      // كريدنشيالز غلط
       if (result.error) {
+        // ==========================================
+        // فحص لو الحساب محظور بسبب محاولات كثيرة
+        // NextAuth بيمرر الـ Error message الحرفية في result.error
+        // الـ auth.ts يرمي: throw new Error(`RATE_LIMITED:${minutes}`)
+        // فبيجي هنا: result.error = "RATE_LIMITED:13"
+        // ==========================================
+        if (result.error.startsWith("RATE_LIMITED:")) {
+          const minutes = result.error.split(":")[1]; // استخراج عدد الدقائق
+          setRateLocked(true);
+          setError(
+            `تم تعليق الدخول مؤقتاً بسبب المحاولات المتكررة — حاول مرة أخرى بعد ${minutes} دقيقة`
+          );
+          return;
+        }
+
+        // كريدنشيالز غلط — رسالة عامة بدون تفاصيل (أمان)
         setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
         return;
       }
@@ -349,18 +366,35 @@ function LoginForm() {
               )}
             </div>
 
-            {/* رسالة خطأ تسجيل الدخول */}
+            {/* ==========================================
+                رسالة خطأ تسجيل الدخول
+                - rateLocked = true  → برتقالي + أيقونة قفل (حظر مؤقت)
+                - rateLocked = false → أحمر عادي (بيانات خاطئة)
+                ========================================== */}
             {error && (
               <div style={{
                 borderRadius: "0.75rem",
                 padding:      "0.75rem 1rem",
-                textAlign:    "center",
                 fontSize:     "0.875rem",
-                background:   "oklch(0.65 0.22 25 / 12%)",
-                border:       "1px solid oklch(0.65 0.22 25 / 30%)",
-                color:        "oklch(0.72 0.22 25)",
+                // لون مختلف لحالة الحظر المؤقت مقابل الخطأ العادي
+                background: rateLocked
+                  ? "rgba(234, 120, 20, 0.10)"
+                  : "oklch(0.65 0.22 25 / 12%)",
+                border: rateLocked
+                  ? "1px solid rgba(234, 120, 20, 0.35)"
+                  : "1px solid oklch(0.65 0.22 25 / 30%)",
+                color: rateLocked
+                  ? "rgba(255, 160, 60, 1)"
+                  : "oklch(0.72 0.22 25)",
+                display:    "flex",
+                alignItems: "flex-start",
+                gap:        "0.6rem",
               }}>
-                {error}
+                {/* أيقونة القفل للحظر المؤقت — بدونها رسالة خطأ عادية */}
+                {rateLocked && (
+                  <ShieldAlert style={{ width: "18px", height: "18px", flexShrink: 0, marginTop: "1px" }} />
+                )}
+                <span>{error}</span>
               </div>
             )}
 
@@ -369,14 +403,14 @@ function LoginForm() {
                 ========================================== */}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || rateLocked} // معطّل أثناء التحميل أو الحظر
               className="btn-gold"
               style={{
                 height:     "50px",
                 width:      "100%",
                 fontSize:   "1rem",
-                cursor:     isSubmitting ? "not-allowed" : "pointer",
-                opacity:    isSubmitting ? 0.7 : 1,
+                cursor:     (isSubmitting || rateLocked) ? "not-allowed" : "pointer",
+                opacity:    (isSubmitting || rateLocked) ? 0.5 : 1,
                 display:    "flex",
                 alignItems: "center",
                 justifyContent: "center",

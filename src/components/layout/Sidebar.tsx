@@ -49,11 +49,17 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 interface SidebarProps {
-  userRole: UserRole;
-  userName: string;
+  userRole:      UserRole;
+  userName:      string;
+  // ==========================================
+  // بادجات الإشعارات — اختيارية، مش كل role محتاجها
+  // key = href الصفحة، value = العدد المعلق
+  // مثال: { "/admin/requests": 3, "/admin/payments": 7 }
+  // ==========================================
+  pendingCounts?: Record<string, number>;
 }
 
-export default function Sidebar({ userRole, userName }: SidebarProps) {
+export default function Sidebar({ userRole, userName, pendingCounts = {} }: SidebarProps) {
   const pathname = usePathname();
   const items = navItemsByRole[userRole] ?? [];
 
@@ -148,7 +154,10 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {items.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            const Icon = item.icon;
+            const Icon     = item.icon;
+
+            // عدد العناصر المعلقة لهذه الصفحة (0 إذا مفيش)
+            const badgeCount = pendingCounts[item.href] ?? 0;
 
             return (
               <Link
@@ -165,7 +174,33 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
                 }
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                {item.label}
+
+                {/* الـ label + البادج في نفس السطر */}
+                <span className="flex-1">{item.label}</span>
+
+                {/* ==========================================
+                    بادج الإشعارات — يظهر فقط لو badgeCount > 0
+                    لون سيان مضيء يلفت النظر بدون إزعاج
+                    لو العدد > 99 نعرض "99+" عشان متتكسرش
+                    ========================================== */}
+                {badgeCount > 0 && (
+                  <span
+                    style={{
+                      background:   "var(--cyan)",
+                      color:        "#0A1628",           // كحلي داكن على الـ cyan يعطي تباين عالي
+                      fontSize:     "0.65rem",
+                      fontWeight:   "800",
+                      lineHeight:   "1",
+                      padding:      "2px 6px",
+                      borderRadius: "9999px",            // دائري كامل
+                      minWidth:     "18px",
+                      textAlign:    "center",
+                      flexShrink:   0,
+                    }}
+                  >
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}

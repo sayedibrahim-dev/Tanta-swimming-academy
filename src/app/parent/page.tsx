@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { Users, CreditCard, Clock, BellRing, ArrowLeft } from "lucide-react";
+import { Users, CreditCard, Clock, BellRing, ArrowLeft, UserPlus, CheckCircle2, Sparkles } from "lucide-react";
 import { simulatedNow } from "@/lib/now";
 
 // ==========================================
@@ -59,6 +59,12 @@ export default async function ParentDashboard() {
   ) ?? [];
   const unpaidCount = unpaidSwimmers.length; // عدد غير المدفوعين هذا الشهر
 
+  // ==========================================
+  // هل ولي الأمر جديد تماماً؟ (لا يوجد له أي سباح بأي حالة)
+  // ده هو الشرط اللي بيطلع بيه الـ Onboarding Guide
+  // ==========================================
+  const hasNoSwimmers = !swimmers || swimmers.length === 0;
+
   return (
     <div className="p-4 md:p-8 space-y-6">
 
@@ -73,6 +79,122 @@ export default async function ParentDashboard() {
           متابعة أبنائك في أكاديمية طنطا للسباحة
         </p>
       </div>
+
+      {/* ==========================================
+          Onboarding Guide — يظهر فقط للمستخدمين الجدد اللي مسجلوش أي سباح
+          لما يضيف أول سباح، الكارد ده بيختفي تلقائياً
+          ========================================== */}
+      {hasNoSwimmers && (
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: "var(--card)",
+            border:     "1px solid var(--border)",
+          }}
+        >
+          {/* رأس الكارد — ترحيب + أيقونة */}
+          <div className="flex items-center gap-3 mb-6">
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "var(--cyan-muted)" }}
+            >
+              <Sparkles className="w-5 h-5" style={{ color: "var(--cyan)" }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">مرحباً بك في أكاديمية طنطا!</h2>
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                ابدأ رحلة ابنك في ثلاث خطوات بسيطة
+              </p>
+            </div>
+          </div>
+
+          {/* ==========================================
+              الخطوات الثلاث — على الكمبيوتر أفقية، على الموبايل رأسية
+              ========================================== */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+            {/* ─── الخطوة ١ — أضف سباحك ─── */}
+            <div
+              className="flex flex-col items-center text-center p-4 rounded-xl gap-3"
+              style={{ background: "var(--background)", border: "1px solid var(--border)" }}
+            >
+              {/* دائرة الرقم */}
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-base font-bold"
+                style={{ background: "var(--cyan)", color: "#0A1628" }}
+              >
+                1
+              </div>
+              {/* أيقونة الخطوة */}
+              <UserPlus className="w-7 h-7" style={{ color: "var(--cyan)" }} />
+              {/* نص الخطوة */}
+              <div>
+                <p className="font-semibold text-white text-sm mb-1">أضف بيانات ابنك</p>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  اذهب لصفحة «أبنائي» واضغط على «إضافة سباح»، وأدخل اسمه وتاريخ ميلاده والمجموعة
+                </p>
+              </div>
+            </div>
+
+            {/* ─── الخطوة ٢ — انتظر الموافقة ─── */}
+            <div
+              className="flex flex-col items-center text-center p-4 rounded-xl gap-3"
+              style={{ background: "var(--background)", border: "1px solid var(--border)" }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-base font-bold"
+                style={{ background: "var(--gold)", color: "#0A1628" }}
+              >
+                2
+              </div>
+              <Clock className="w-7 h-7" style={{ color: "var(--gold)" }} />
+              <div>
+                <p className="font-semibold text-white text-sm mb-1">انتظر موافقة الإدارة</p>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  سيراجع فريق الأكاديمية طلبك خلال وقت قصير ويقبله في النظام
+                </p>
+              </div>
+            </div>
+
+            {/* ─── الخطوة ٣ — ادفع الاشتراك ─── */}
+            <div
+              className="flex flex-col items-center text-center p-4 rounded-xl gap-3"
+              style={{ background: "var(--background)", border: "1px solid var(--border)" }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-base font-bold"
+                style={{ background: "oklch(0.65 0.22 25)", color: "white" }}
+              >
+                3
+              </div>
+              <CreditCard className="w-7 h-7" style={{ color: "oklch(0.65 0.22 25)" }} />
+              <div>
+                <p className="font-semibold text-white text-sm mb-1">ادفع الاشتراك الشهري</p>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  توجّه للخزينة لسداد الاشتراك، ثم ارفع صورة الإيصال من صفحة «المدفوعات»
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ─── زر الـ CTA ─── */}
+          <div className="text-center">
+            <a
+              href="/parent/swimmers"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
+              style={{
+                background: "var(--cyan)",
+                color:      "#0A1628",
+              }}
+            >
+              <UserPlus className="w-4 h-4" />
+              أضف سباحك الآن
+              <ArrowLeft className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* ==========================================
           الرسالة الشهرية — تظهر عند وجود اشتراكات غير مدفوعة
