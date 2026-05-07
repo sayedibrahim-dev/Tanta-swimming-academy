@@ -54,7 +54,7 @@ export default async function AdminParentsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">أولياء الأمور</h1>
         <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-          إدارة حسابات أولياء الأمور وإعادة تعيين كلمات المرور
+          إدارة حسابات أولياء الأمور
         </p>
       </div>
 
