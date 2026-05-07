@@ -8,7 +8,7 @@ import { useState } from "react";
 import {
   LogOut, Menu, X,
   LayoutDashboard, ClipboardList, CreditCard,
-  Users, GraduationCap, UsersRound, Settings,
+  Users, GraduationCap, UsersRound, Settings, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/lib/types";
@@ -24,6 +24,7 @@ const navItemsByRole: Record<UserRole, { label: string; href: string; icon: Reac
     { label: "السباحون",          href: "/admin/swimmers",  icon: Users           },
     { label: "المدربون",          href: "/admin/coaches",   icon: GraduationCap   },
     { label: "المجموعات",         href: "/admin/groups",    icon: UsersRound      },
+    { label: "التقارير",          href: "/admin/reports",   icon: FileText        },
   ],
   coach: [
     { label: "لوحة التحكم", href: "/coach",           icon: LayoutDashboard },
