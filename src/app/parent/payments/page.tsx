@@ -32,7 +32,7 @@ export default async function PaymentsPage() {
   const { data: payments } = swimmerIds.length > 0
     ? await supabaseAdmin
         .from("payments")
-        .select("id, swimmer_id, status, receipt_image_url, created_at")
+        .select("id, swimmer_id, status, receipt_image_url, created_at, rejection_note")
         .in("swimmer_id", swimmerIds)  // فقط لو في سباحين فعلاً
         .eq("month", currentMonth)
         .eq("year", currentYear)

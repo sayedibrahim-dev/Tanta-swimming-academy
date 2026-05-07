@@ -76,6 +76,9 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
     monthYear: string;    // الشهر والسنة للعرض
   } | null>(null);
 
+  // سبب الرفض — بيتملأ من الأدمن في modal الرفض (اختياري)
+  const [rejectionNote, setRejectionNote] = useState("");
+
   // حالة التحميل أثناء إرسال القرار للـ API
   const [submitting, setSubmitting] = useState(false);
 
@@ -93,7 +96,8 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
     month: number,
     year: number,
   ) => {
-    setActionError(null); // مسح الأخطاء السابقة
+    setActionError(null);  // مسح الأخطاء السابقة
+    setRejectionNote("");  // مسح سبب الرفض من أي modal سابق
     setConfirmModal({
       paymentId,
       swimmerId,
@@ -131,11 +135,15 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
     // تحديد الـ endpoint حسب نوع الإجراء (قبول أو رفض)
     const endpoint = `/api/admin/payments/${confirmModal.paymentId}/${confirmModal.action}`;
 
-    // إرسال الطلب للـ API
+    // إرسال الطلب للـ API — نرسل سبب الرفض لو الإجراء رفض
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}), // لا يحتاج body — الـ ID في الـ URL
+      body: JSON.stringify(
+        confirmModal.action === "reject" && rejectionNote.trim()
+          ? { rejection_note: rejectionNote.trim() } // سبب الرفض لو موجود
+          : {}                                        // body فارغ للقبول أو الرفض بدون سبب
+      ),
     });
 
     setSubmitting(false); // إيقاف حالة التحميل
@@ -533,12 +541,41 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
             </div>
 
             {/* نص التأكيد */}
-            <p className="text-sm mb-5" style={{ color: "var(--muted-foreground)" }}>
+            <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
               {confirmModal.action === "approve"
                 ? `هل تريد قبول إيصال ${confirmModal.monthYear} للسباح "${confirmModal.swimmerName}"؟`
                 : `هل تريد رفض إيصال ${confirmModal.monthYear} للسباح "${confirmModal.swimmerName}"؟`
               }
             </p>
+
+            {/* حقل سبب الرفض — يظهر فقط عند الرفض */}
+            {confirmModal.action === "reject" && (
+              <div className="mb-4">
+                <label
+                  className="block text-sm mb-1.5"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
+                  سبب الرفض <span style={{ color: "var(--gold)" }}>(اختياري)</span>
+                </label>
+                <textarea
+                  value={rejectionNote}
+                  onChange={(e) => setRejectionNote(e.target.value)} // تحديث السبب عند الكتابة
+                  maxLength={300}
+                  rows={3}
+                  placeholder="مثال: الإيصال غير واضح — يرجى إعادة الرفع بجودة أعلى"
+                  className="w-full px-3 py-2 rounded-xl text-sm text-white resize-none"
+                  style={{
+                    background: "var(--secondary)",
+                    border: "1px solid var(--border)",
+                    outline: "none",
+                  }}
+                />
+                {/* عداد الحروف */}
+                <p className="text-xs mt-1 text-left" style={{ color: "var(--muted-foreground)" }}>
+                  {rejectionNote.length}/300
+                </p>
+              </div>
+            )}
 
             {/* رسالة الخطأ — بتظهر بس لو فيه خطأ */}
             {actionError && (

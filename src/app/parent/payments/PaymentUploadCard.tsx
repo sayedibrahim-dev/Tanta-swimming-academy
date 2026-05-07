@@ -11,7 +11,13 @@ import { levelLabels } from "@/lib/types";
 
 interface PaymentUploadCardProps {
   swimmer: { id: string; name: string; age: number; level: string };
-  payment: { id: string; status: string; receipt_image_url: string; created_at: string } | null;
+  payment: {
+    id: string;
+    status: string;
+    receipt_image_url: string;
+    created_at: string;
+    rejection_note?: string | null; // سبب الرفض من الأدمن (ممكن يكون فارغ)
+  } | null;
   currentMonth: number;
   currentYear: number;
   monthName: string;
@@ -188,6 +194,30 @@ export default function PaymentUploadCard({
           <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
             تاريخ الدفع: {new Date(payment.created_at).toLocaleDateString("ar-EG")}
           </p>
+        </div>
+      )}
+
+      {/* إيصال مرفوض: عرض سبب الرفض لو موجود */}
+      {payment?.status === "rejected" && payment.rejection_note && (
+        <div
+          className="mt-4 pt-4 border-t"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div
+            className="rounded-lg p-3 text-sm"
+            style={{
+              background: "oklch(0.65 0.22 25 / 10%)",
+              border: "1px solid oklch(0.65 0.22 25 / 25%)",
+              color: "oklch(0.75 0.18 25)", // أحمر فاتح للقراءة
+            }}
+          >
+            {/* عنوان السبب */}
+            <p className="font-semibold mb-1 text-xs" style={{ color: "var(--destructive)" }}>
+              سبب الرفض:
+            </p>
+            {/* نص السبب */}
+            <p>{payment.rejection_note}</p>
+          </div>
         </div>
       )}
 

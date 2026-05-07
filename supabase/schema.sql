@@ -105,6 +105,7 @@ CREATE TABLE payments (
   year              INTEGER NOT NULL CHECK (year > 2020),
   receipt_image_url TEXT NOT NULL,
   status            TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  rejection_note    TEXT,                        -- سبب الرفض — يكتبه الأدمن عند رفض الإيصال
   reviewed_by       UUID REFERENCES users(id),
   reviewed_at       TIMESTAMPTZ,
   created_at        TIMESTAMPTZ DEFAULT NOW(),

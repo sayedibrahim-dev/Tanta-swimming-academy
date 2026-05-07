@@ -10,7 +10,15 @@ import { authOptions } from "@/lib/auth";
 // استيراد الـ Supabase Client بصلاحيات كاملة
 import { supabaseAdmin } from "@/lib/supabase";
 
-// ملاحظة: الـ reject لا يحتاج body — معرف الدفعة موجود في الـ URL
+// استيراد Zod للتحقق من البيانات الواردة
+import { z } from "zod";
+
+// ==========================================
+// Schema التحقق من بيانات الطلب
+// ==========================================
+const schema = z.object({
+  rejection_note: z.string().max(300, "السبب طويل جداً (300 حرف كحد أقصى)").optional(), // سبب الرفض — اختياري
+});
 
 // ==========================================
 // Handler الـ POST — بيستقبل طلب رفض الإيصال
@@ -30,6 +38,19 @@ export async function POST(
   // استخراج معرف الدفعة من الـ URL
   const { id: paymentId } = await params; // await مطلوب لأن params هو Promise
 
+  // قراءة بيانات الطلب والتحقق منها
+  const body = await req.json().catch(() => ({})); // لو الـ body فارغ — نعطي object فارغ
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" },
+      { status: 400 }
+    );
+  }
+
+  // استخراج سبب الرفض (اختياري)
+  const { rejection_note } = parsed.data;
+
   // التحقق من وجود الدفعة وأنها لا تزال معلقة
   const { data: payment, error: fetchError } = await supabaseAdmin
     .from("payments")           // من جدول المدفوعات
@@ -47,12 +68,13 @@ export async function POST(
     return NextResponse.json({ error: "هذا الإيصال تمت مراجعته مسبقاً" }, { status: 409 });
   }
 
-  // تحديث الدفعة إلى "مرفوضة"
+  // تحديث الدفعة إلى "مرفوضة" مع حفظ سبب الرفض
   const { error: updateError } = await supabaseAdmin
     .from("payments")
     .update({
-      status: "rejected",           // تغيير الحالة لـ "مرفوض"
-      reviewed_by: session.user.id, // تسجيل معرف الأدمن المراجع
+      status: "rejected",                    // تغيير الحالة لـ "مرفوض"
+      rejection_note: rejection_note ?? null, // سبب الرفض (ممكن يكون null)
+      reviewed_by: session.user.id,          // تسجيل معرف الأدمن المراجع
       reviewed_at: new Date().toISOString(), // تسجيل وقت المراجعة
     })
     .eq("id", paymentId); // تحديث الدفعة المحددة
@@ -62,9 +84,6 @@ export async function POST(
     console.error("خطأ في رفض الإيصال:", updateError);
     return NextResponse.json({ error: "حدث خطأ أثناء تحديث الإيصال" }, { status: 500 });
   }
-
-  // ملاحظة: payment_status للسباح بيفضل "unpaid"
-  // ولي الأمر محتاج يرفع إيصال جديد
 
   // كل حاجة اتعملت بنجاح
   return NextResponse.json({ message: "تم رفض الإيصال" });
