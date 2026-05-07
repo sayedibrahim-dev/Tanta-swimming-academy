@@ -20,7 +20,7 @@ export default async function AdminPaymentsPage() {
   const session = await getAppSession();
   if (!session || session.user.role !== "admin") redirect("/login");
 
-  // جلب المدفوعات المعلقة مع بيانات السباح وولي الأمر
+  // جلب المدفوعات (المعلقة + المقبولة) مع بيانات السباح وولي الأمر
   const { data: payments } = await supabaseAdmin
     .from("payments")                // من جدول المدفوعات
     .select(`
@@ -41,8 +41,11 @@ export default async function AdminPaymentsPage() {
         )
       )
     `)
-    .eq("status", "pending")         // فقط المدفوعات المعلقة
-    .order("created_at", { ascending: true }); // الأقدم أولاً
+    .in("status", ["pending", "approved"]) // المعلقة والمقبولة معاً
+    .order("created_at", { ascending: false }); // الأحدث أولاً
+
+  // حساب عدد المعلقة للعرض في العنوان
+  const pendingCount = (payments ?? []).filter((p) => p.status === "pending").length;
 
   return (
     // حاوية الصفحة
@@ -52,11 +55,13 @@ export default async function AdminPaymentsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">المدفوعات الشهرية</h1>
         <p className="mt-1" style={{ color: "var(--muted-foreground)" }}>
-          {payments?.length ?? 0} إيصال ينتظر المراجعة
+          {pendingCount > 0
+            ? `${pendingCount} إيصال ينتظر المراجعة`
+            : "كل الإيصالات تمت مراجعتها"}
         </p>
       </div>
 
-      {/* المكوّن التفاعلي — يستقبل المدفوعات المعلقة */}
+      {/* المكوّن التفاعلي — يستقبل المدفوعات */}
       <PaymentsClient
         initialPayments={(payments ?? []) as unknown as PaymentItem[]}
       />

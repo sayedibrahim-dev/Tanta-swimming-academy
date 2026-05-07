@@ -15,6 +15,7 @@ import {
   User,          // أيقونة ولي الأمر
   Phone,         // أيقونة التليفون
   Calendar,      // أيقونة التاريخ
+  Clock,         // أيقونة المعلق
 } from "lucide-react";
 
 // استيراد مكوّن الزرار
@@ -48,7 +49,7 @@ function formatDate(iso: string) {
 // Props المكوّن الرئيسي
 // ==========================================
 interface PaymentsClientProps {
-  initialPayments: PaymentItem[]; // المدفوعات المعلقة من السيرفر
+  initialPayments: PaymentItem[]; // كل المدفوعات (معلقة + مقبولة) من السيرفر
 }
 
 // ==========================================
@@ -56,16 +57,23 @@ interface PaymentsClientProps {
 // ==========================================
 export default function PaymentsClient({ initialPayments }: PaymentsClientProps) {
 
-  // قائمة المدفوعات — بتتحدث لما نقبل أو نرفض إيصال
+  // قائمة كل المدفوعات — بتتحدث لما نقبل أو نرفض إيصال
   const [payments, setPayments] = useState(initialPayments);
+
+  // التاب النشط: "pending" = ينتظر المراجعة | "approved" = المقبولة
+  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+
+  // تصفية المدفوعات حسب الحالة
+  const pendingPayments  = payments.filter((p) => p.status === "pending");
+  const approvedPayments = payments.filter((p) => p.status === "approved");
 
   // معرف الدفعة اللي بيتم مراجعتها دلوقتي (للـ modal)
   const [confirmModal, setConfirmModal] = useState<{
-    paymentId: string;  // معرف الدفعة
-    swimmerId: string;  // معرف السباح (محتاجه لتحديث payment_status)
+    paymentId: string;    // معرف الدفعة
+    swimmerId: string;    // معرف السباح
     action: "approve" | "reject"; // نوع الإجراء
-    swimmerName: string; // اسم السباح للعرض في الـ modal
-    monthYear: string;   // الشهر والسنة للعرض في الـ modal
+    swimmerName: string;  // اسم السباح للعرض
+    monthYear: string;    // الشهر والسنة للعرض
   } | null>(null);
 
   // حالة التحميل أثناء إرسال القرار للـ API
@@ -91,12 +99,21 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
       swimmerId,
       action,
       swimmerName,
-      monthYear: `${monthNames[month]} ${year}`, // تحويل الشهر لاسمه العربي مع السنة
+      monthYear: `${monthNames[month]} ${year}`, // الشهر بالعربي مع السنة
     });
   };
 
   // ==========================================
-  // دالة إزالة الدفعة من القائمة بعد القرار (Optimistic Update)
+  // تحديث حالة الدفعة في القائمة المحلية (عند القبول)
+  // ==========================================
+  const approvePaymentLocally = (paymentId: string) => {
+    setPayments((prev) =>
+      prev.map((p) => (p.id === paymentId ? { ...p, status: "approved" } : p))
+    );
+  };
+
+  // ==========================================
+  // إزالة الدفعة من القائمة (عند الرفض)
   // ==========================================
   const removePayment = (paymentId: string) => {
     setPayments((prev) => prev.filter((p) => p.id !== paymentId));
@@ -118,8 +135,7 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // لا يحتاج body — معرف الدفعة موجود في الـ URL
-      body: JSON.stringify({}),
+      body: JSON.stringify({}), // لا يحتاج body — الـ ID في الـ URL
     });
 
     setSubmitting(false); // إيقاف حالة التحميل
@@ -131,200 +147,346 @@ export default function PaymentsClient({ initialPayments }: PaymentsClientProps)
       return;
     }
 
-    // نجاح: إزالة الدفعة من القائمة وإغلاق الـ modal
-    removePayment(confirmModal.paymentId);
-    setConfirmModal(null);
+    // نجاح:
+    if (confirmModal.action === "approve") {
+      approvePaymentLocally(confirmModal.paymentId); // انقل للمقبولة
+      setActiveTab("approved"); // انتقل لتاب المقبولة عشان يشوف الإيصال
+    } else {
+      removePayment(confirmModal.paymentId); // شيل من الرفض
+    }
+
+    setConfirmModal(null); // أغلق الـ modal
   };
 
   // ==========================================
-  // الحالة الفارغة — مفيش مدفوعات معلقة
+  // مكوّن بطاقة إيصال (قابل للإعادة الاستخدام)
   // ==========================================
-  if (payments.length === 0) {
+  const PaymentCard = ({
+    payment,
+    showActions,
+  }: {
+    payment: PaymentItem;
+    showActions: boolean; // true = يعرض أزرار القبول/الرفض | false = يعرض بادج "مقبول" فقط
+  }) => {
+    const swimmer = payment.swimmer;
+    const parent  = swimmer?.parent;
+
     return (
+      // بطاقة الإيصال
       <div
-        className="rounded-2xl p-16 flex flex-col items-center gap-4 text-center"
-        style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+        className="rounded-2xl p-5 border"
+        style={{ background: "var(--card)", borderColor: "var(--border)" }}
       >
-        {/* أيقونة كبيرة */}
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{ background: "var(--cyan-muted)" }}
-        >
-          <CreditCard className="w-8 h-8" style={{ color: "var(--cyan)" }} />
-        </div>
+        <div className="flex items-start gap-5">
 
-        {/* نص الحالة الفارغة */}
-        <div>
-          <p className="text-lg font-semibold text-white">لا توجد إيصالات معلقة</p>
-          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-            كل الإيصالات تمت مراجعتها
-          </p>
-        </div>
-      </div>
-    );
-  }
+          {/* ==========================================
+              صورة الإيصال المصغرة — قابلة للنقر للتكبير
+              ========================================== */}
+          <a
+            href={payment.receipt_image_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 relative group"
+            title="عرض الإيصال كاملاً"
+          >
+            {/* الصورة المصغرة */}
+            <img
+              src={payment.receipt_image_url}
+              alt="إيصال الدفع"
+              className="w-20 h-24 object-cover rounded-xl border"
+              style={{ borderColor: "var(--border)" }}
+            />
 
-  // ==========================================
-  // عرض قائمة بطاقات الإيصالات
-  // ==========================================
-  return (
-    <>
-      {/* قائمة البطاقات */}
-      <div className="space-y-4">
-        {payments.map((payment) => {
-
-          // استخراج بيانات السباح
-          const swimmer = payment.swimmer;
-
-          // استخراج بيانات ولي الأمر
-          const parent = swimmer?.parent;
-
-          return (
-            // بطاقة الإيصال الواحد
+            {/* طبقة hover فوق الصورة */}
             <div
-              key={payment.id}
-              className="rounded-2xl p-5 border"
-              style={{ background: "var(--card)", borderColor: "var(--border)" }}
+              className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: "oklch(0.08 0 0 / 70%)" }}
             >
-              <div className="flex items-start gap-5">
+              <ExternalLink className="w-5 h-5 text-white" />
+            </div>
+          </a>
 
-                {/* ==========================================
-                    صورة الإيصال المصغرة — قابلة للنقر للتكبير
-                    ========================================== */}
-                <a
-                  href={payment.receipt_image_url} // رابط الصورة الكاملة
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 relative group"
-                  title="عرض الإيصال كاملاً"
-                >
-                  {/* الصورة المصغرة */}
-                  <img
-                    src={payment.receipt_image_url}
-                    alt="إيصال الدفع"
-                    className="w-20 h-24 object-cover rounded-xl border"
-                    style={{ borderColor: "var(--border)" }}
-                  />
+          {/* ==========================================
+              عمود البيانات
+              ========================================== */}
+          <div className="flex-1 min-w-0">
 
-                  {/* طبقة hover فوق الصورة */}
-                  <div
-                    className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ background: "oklch(0.08 0 0 / 70%)" }}
+            {/* صف العنوان — اسم السباح والشهر */}
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                {/* اسم السباح */}
+                <h3 className="text-base font-semibold text-white">
+                  {swimmer?.name ?? "—"}
+                </h3>
+
+                {/* الشهر والسنة — مميز بلون ذهبي */}
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span
+                    className="text-sm font-medium px-2 py-0.5 rounded-full"
+                    style={{ background: "var(--gold-muted)", color: "var(--gold)" }}
                   >
-                    <ExternalLink className="w-5 h-5 text-white" />
-                  </div>
-                </a>
+                    {monthNames[payment.month]} {payment.year}
+                  </span>
 
-                {/* ==========================================
-                    عمود البيانات
-                    ========================================== */}
-                <div className="flex-1 min-w-0">
-
-                  {/* صف العنوان — اسم السباح والشهر */}
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div>
-                      {/* اسم السباح */}
-                      <h3 className="text-base font-semibold text-white">
-                        {swimmer?.name ?? "—"}
-                      </h3>
-
-                      {/* الشهر والسنة — مميز بلون ذهبي */}
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span
-                          className="text-sm font-medium px-2 py-0.5 rounded-full"
-                          style={{ background: "var(--gold-muted)", color: "var(--gold)" }}
-                        >
-                          {monthNames[payment.month]} {payment.year}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* تاريخ رفع الإيصال */}
-                    <div
-                      className="flex items-center gap-1.5 text-xs flex-shrink-0"
-                      style={{ color: "var(--muted-foreground)" }}
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      {formatDate(payment.created_at)}
-                    </div>
-                  </div>
-
-                  {/* بيانات ولي الأمر */}
-                  <div className="mt-3 flex flex-wrap gap-4">
-
-                    {/* اسم ولي الأمر */}
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <User className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
-                      <span style={{ color: "var(--muted-foreground)" }}>ولي الأمر:</span>
-                      <span className="text-white font-medium">{parent?.name ?? "—"}</span>
-                    </div>
-
-                    {/* رقم التليفون — بيظهر بس لو موجود */}
-                    {parent?.phone && (
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <Phone className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
-                        <span
-                          className="font-mono"
-                          style={{ color: "var(--muted-foreground)", direction: "ltr" }}
-                        >
-                          {parent.phone}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* أزرار القبول والرفض */}
-                  <div className="mt-4 flex items-center gap-3">
-
-                    {/* زرار القبول */}
-                    <Button
-                      onClick={() => openConfirm(
-                        payment.id,
-                        payment.swimmer_id,
-                        "approve",
-                        swimmer?.name ?? "السباح",
-                        payment.month,
-                        payment.year,
-                      )}
-                      className="flex items-center gap-2 text-sm font-medium h-9 px-4"
+                  {/* بادج "مقبول" — يظهر فقط في تاب المقبولة */}
+                  {!showActions && (
+                    <span
+                      className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
                       style={{
                         background: "var(--cyan-muted)",
                         color: "var(--cyan)",
                         border: "1px solid oklch(0.72 0.18 195 / 30%)",
                       }}
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      قبول
-                    </Button>
-
-                    {/* زرار الرفض */}
-                    <Button
-                      onClick={() => openConfirm(
-                        payment.id,
-                        payment.swimmer_id,
-                        "reject",
-                        swimmer?.name ?? "السباح",
-                        payment.month,
-                        payment.year,
-                      )}
-                      variant="ghost"
-                      className="flex items-center gap-2 text-sm font-medium h-9 px-4"
-                      style={{
-                        background: "oklch(0.65 0.22 25 / 15%)",
-                        color: "oklch(0.65 0.22 25)",
-                        border: "1px solid oklch(0.65 0.22 25 / 30%)",
-                      }}
-                    >
-                      <XCircle className="w-4 h-4" />
-                      رفض
-                    </Button>
-                  </div>
+                      <CheckCircle2 className="w-3 h-3" />
+                      مقبول
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* تاريخ رفع الإيصال */}
+              <div
+                className="flex items-center gap-1.5 text-xs flex-shrink-0"
+                style={{ color: "var(--muted-foreground)" }}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                {formatDate(payment.created_at)}
+              </div>
             </div>
-          );
-        })}
+
+            {/* بيانات ولي الأمر */}
+            <div className="mt-3 flex flex-wrap gap-4">
+
+              {/* اسم ولي الأمر */}
+              <div className="flex items-center gap-1.5 text-sm">
+                <User
+                  className="w-3.5 h-3.5 flex-shrink-0"
+                  style={{ color: "var(--muted-foreground)" }}
+                />
+                <span style={{ color: "var(--muted-foreground)" }}>ولي الأمر:</span>
+                <span className="text-white font-medium">{parent?.name ?? "—"}</span>
+              </div>
+
+              {/* رقم التليفون — بيظهر بس لو موجود */}
+              {parent?.phone && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Phone
+                    className="w-3.5 h-3.5 flex-shrink-0"
+                    style={{ color: "var(--muted-foreground)" }}
+                  />
+                  <span
+                    className="font-mono"
+                    style={{ color: "var(--muted-foreground)", direction: "ltr" }}
+                  >
+                    {parent.phone}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ==========================================
+                أزرار القبول والرفض — فقط في تاب "ينتظر المراجعة"
+                ========================================== */}
+            {showActions && (
+              <div className="mt-4 flex items-center gap-3">
+
+                {/* زرار القبول */}
+                <Button
+                  onClick={() => openConfirm(
+                    payment.id,
+                    payment.swimmer_id,
+                    "approve",
+                    swimmer?.name ?? "السباح",
+                    payment.month,
+                    payment.year,
+                  )}
+                  className="flex items-center gap-2 text-sm font-medium h-9 px-4"
+                  style={{
+                    background: "var(--cyan-muted)",
+                    color: "var(--cyan)",
+                    border: "1px solid oklch(0.72 0.18 195 / 30%)",
+                  }}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  قبول
+                </Button>
+
+                {/* زرار الرفض */}
+                <Button
+                  onClick={() => openConfirm(
+                    payment.id,
+                    payment.swimmer_id,
+                    "reject",
+                    swimmer?.name ?? "السباح",
+                    payment.month,
+                    payment.year,
+                  )}
+                  variant="ghost"
+                  className="flex items-center gap-2 text-sm font-medium h-9 px-4"
+                  style={{
+                    background: "oklch(0.65 0.22 25 / 15%)",
+                    color: "oklch(0.65 0.22 25)",
+                    border: "1px solid oklch(0.65 0.22 25 / 30%)",
+                  }}
+                >
+                  <XCircle className="w-4 h-4" />
+                  رفض
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+    );
+  };
+
+  // ==========================================
+  // الواجهة الرئيسية
+  // ==========================================
+  return (
+    <>
+      {/* ==========================================
+          التابات — ينتظر المراجعة | المقبولة
+          ========================================== */}
+      <div
+        className="flex gap-1 p-1 rounded-xl mb-6 w-fit"
+        style={{ background: "var(--secondary)" }}
+      >
+        {/* تاب ينتظر المراجعة */}
+        <button
+          onClick={() => setActiveTab("pending")}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={
+            activeTab === "pending"
+              ? {
+                  background: "var(--card)",
+                  color: "var(--cyan)",
+                  boxShadow: "0 1px 4px oklch(0 0 0 / 30%)",
+                }
+              : { color: "var(--muted-foreground)" }
+          }
+        >
+          <Clock className="w-4 h-4" />
+          ينتظر المراجعة
+          {/* عداد المعلقة */}
+          {pendingPayments.length > 0 && (
+            <span
+              className="text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center"
+              style={{
+                background: activeTab === "pending"
+                  ? "var(--cyan-muted)"
+                  : "oklch(0.65 0.22 25 / 20%)",
+                color: activeTab === "pending"
+                  ? "var(--cyan)"
+                  : "oklch(0.65 0.22 25)",
+              }}
+            >
+              {pendingPayments.length}
+            </span>
+          )}
+        </button>
+
+        {/* تاب المقبولة */}
+        <button
+          onClick={() => setActiveTab("approved")}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={
+            activeTab === "approved"
+              ? {
+                  background: "var(--card)",
+                  color: "var(--cyan)",
+                  boxShadow: "0 1px 4px oklch(0 0 0 / 30%)",
+                }
+              : { color: "var(--muted-foreground)" }
+          }
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          المقبولة
+          {/* عداد المقبولة */}
+          {approvedPayments.length > 0 && (
+            <span
+              className="text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center"
+              style={{
+                background: activeTab === "approved"
+                  ? "var(--cyan-muted)"
+                  : "var(--secondary)",
+                color: activeTab === "approved"
+                  ? "var(--cyan)"
+                  : "var(--muted-foreground)",
+              }}
+            >
+              {approvedPayments.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ==========================================
+          محتوى تاب "ينتظر المراجعة"
+          ========================================== */}
+      {activeTab === "pending" && (
+        pendingPayments.length === 0 ? (
+          // حالة فارغة
+          <div
+            className="rounded-2xl p-16 flex flex-col items-center gap-4 text-center"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "var(--cyan-muted)" }}
+            >
+              <CreditCard className="w-8 h-8" style={{ color: "var(--cyan)" }} />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-white">لا توجد إيصالات معلقة</p>
+              <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+                كل الإيصالات تمت مراجعتها
+              </p>
+            </div>
+          </div>
+        ) : (
+          // قائمة الإيصالات المعلقة
+          <div className="space-y-4">
+            {pendingPayments.map((payment) => (
+              <PaymentCard key={payment.id} payment={payment} showActions={true} />
+            ))}
+          </div>
+        )
+      )}
+
+      {/* ==========================================
+          محتوى تاب "المقبولة"
+          ========================================== */}
+      {activeTab === "approved" && (
+        approvedPayments.length === 0 ? (
+          // حالة فارغة
+          <div
+            className="rounded-2xl p-16 flex flex-col items-center gap-4 text-center"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "var(--cyan-muted)" }}
+            >
+              <CheckCircle2 className="w-8 h-8" style={{ color: "var(--cyan)" }} />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-white">لا توجد مدفوعات مقبولة بعد</p>
+              <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+                ستظهر هنا الإيصالات بعد قبولها
+              </p>
+            </div>
+          </div>
+        ) : (
+          // قائمة الإيصالات المقبولة
+          <div className="space-y-4">
+            {approvedPayments.map((payment) => (
+              <PaymentCard key={payment.id} payment={payment} showActions={false} />
+            ))}
+          </div>
+        )
+      )}
 
       {/* ==========================================
           Modal التأكيد — للقبول والرفض معاً
