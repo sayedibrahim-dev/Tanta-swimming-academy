@@ -55,10 +55,10 @@ export async function POST(
   // التحقق من وجود الطلب وأنه لا يزال معلقاً
   // ==========================================
   const { data: request, error: fetchError } = await supabaseAdmin
-    .from("enrollment_requests")              // من جدول طلبات الالتحاق
-    .select("id, swimmer_id, status")         // بنحتاج الـ id والسباح والحالة فقط
-    .eq("id", requestId)                      // بنفلتر على الـ id الوارد في الـ URL
-    .single();                                // بنتوقع سجل واحد فقط
+    .from("enrollment_requests")
+    .select("id, swimmer_id, status, receipt_image_url") // + الإيصال عشان يتسجّل كأول دفعة
+    .eq("id", requestId)
+    .single();
 
   // لو الطلب مش موجود — ارجع بخطأ 404
   if (fetchError || !request) {
@@ -146,6 +146,30 @@ export async function POST(
       { error: "حدث خطأ أثناء تفعيل السباح" },
       { status: 500 }
     );
+  }
+
+  // ==========================================
+  // تسجيل إيصال التسجيل كأول دفعة شهرية مقبولة
+  // الشهر الأول يُعتبر مدفوعاً بإيصال الالتحاق
+  // ==========================================
+  const nowDate        = new Date();
+  const currentMonth   = nowDate.getMonth() + 1; // getMonth() يبدأ من 0
+  const currentYear    = nowDate.getFullYear();
+
+  const { error: paymentError } = await supabaseAdmin
+    .from("payments")
+    .insert({
+      swimmer_id:        request.swimmer_id,
+      month:             currentMonth,
+      year:              currentYear,
+      receipt_image_url: request.receipt_image_url, // نفس إيصال الالتحاق
+      status:            "approved", // مقبول تلقائياً — الأدمن راجع الإيصال بالفعل
+    });
+
+  // لو فشل تسجيل الدفعة — نسجّل تحذير بس مانرجعش بخطأ
+  // السباح اتفعّل بالفعل — أهم من الدفعة
+  if (paymentError) {
+    console.error("تحذير: فشل تسجيل أول دفعة للسباح:", request.swimmer_id, paymentError);
   }
 
   // كل حاجة اتعملت بنجاح — ارجع رسالة نجاح
