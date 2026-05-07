@@ -33,10 +33,12 @@ const statusLabels: Record<string, string> = {
   inactive: "غير نشط",
 };
 
-// ترجمة نمط الأيام للعربية
-const dayPatternLabels: Record<string, string> = {
-  SAT_MON_WED: "سبت / اثنين / أربعاء",
-  SUN_TUE_THU: "أحد / ثلاثاء / خميس",
+// أسماء الشهور بالعربية
+const monthNames: Record<number, string> = {
+  1: "يناير", 2: "فبراير", 3: "مارس",
+  4: "أبريل", 5: "مايو",   6: "يونيو",
+  7: "يوليو", 8: "أغسطس", 9: "سبتمبر",
+  10: "أكتوبر", 11: "نوفمبر", 12: "ديسمبر",
 };
 
 // ==========================================
@@ -55,7 +57,7 @@ interface SwimmerReportItem {
   group_day_pattern: string;
   parent_name: string;
   parent_phone: string;
-  approved_payments: number;
+  paid_last_month: boolean; // هل دفع الشهر الماضي؟
 }
 
 interface CoachReportItem {
@@ -74,32 +76,53 @@ interface CoachReportItem {
 
 // ==========================================
 // دالة توليد HTML تقرير السباحين للطباعة
+// يعرض حالة دفع كل سباح عن الشهر الماضي
 // ==========================================
-function generateSwimmersHTML(swimmers: SwimmerReportItem[]): string {
-  const date = new Date().toLocaleDateString("ar-EG", {
+function generateSwimmersHTML(
+  swimmers: SwimmerReportItem[],
+  lastMonth: number,
+  lastYear: number,
+): string {
+  // اسم الشهر الماضي بالعربية
+  const monthLabel = `${monthNames[lastMonth]} ${lastYear}`;
+
+  // تاريخ إنشاء التقرير
+  const printDate = new Date().toLocaleDateString("ar-EG", {
     year: "numeric", month: "long", day: "numeric",
   });
 
-  const rows = swimmers.map((s, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${s.name}</td>
-      <td>${s.age} سنة</td>
-      <td>${levelLabels[s.level] ?? s.level}</td>
-      <td>${statusLabels[s.status] ?? s.status}</td>
-      <td>${s.parent_name}</td>
-      <td dir="ltr">${s.parent_phone}</td>
-      <td>${s.coach_name}</td>
-      <td>${s.group_label}</td>
-      <td style="text-align:center">${s.approved_payments}</td>
-    </tr>
-  `).join("");
+  // عدد المدفوعين والمتأخرين
+  const paidCount    = swimmers.filter((s) => s.paid_last_month).length;
+  const notPaidCount = swimmers.filter((s) => s.status === "active" && !s.paid_last_month).length;
+
+  const rows = swimmers.map((s, i) => {
+    const paidCell = s.status !== "active"
+      ? `<td style="text-align:center;color:#888">—</td>`
+      : s.paid_last_month
+        ? `<td style="text-align:center;color:#16a34a;font-weight:bold">✓ مدفوع</td>`
+        : `<td style="text-align:center;color:#dc2626;font-weight:bold">✗ غير مدفوع</td>`;
+
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${s.name}</td>
+        <td>${s.age} سنة</td>
+        <td>${levelLabels[s.level] ?? s.level}</td>
+        <td>${statusLabels[s.status] ?? s.status}</td>
+        <td>${s.parent_name}</td>
+        <td dir="ltr">${s.parent_phone}</td>
+        <td>${s.coach_name}</td>
+        <td>${s.group_label}</td>
+        ${paidCell}
+      </tr>
+    `;
+  }).join("");
 
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تقرير السباحين الشامل - أكاديمية طنطا للسباحة</title>
+  <title>تقرير السباحين - ${monthLabel} - أكاديمية طنطا للسباحة</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -115,36 +138,42 @@ function generateSwimmersHTML(swimmers: SwimmerReportItem[]): string {
       padding-bottom: 16px;
       border-bottom: 2px solid #0891b2;
     }
-    .header h1 {
-      font-size: 20px;
-      color: #0891b2;
-      margin-bottom: 4px;
+    .header h1 { font-size: 20px; color: #0891b2; margin-bottom: 4px; }
+    .header .month-badge {
+      display: inline-block;
+      margin-top: 6px;
+      background: #0891b2;
+      color: white;
+      padding: 3px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
     }
-    .header p { color: #555; font-size: 13px; }
     .meta {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 16px;
+      align-items: center;
+      margin-bottom: 12px;
       font-size: 12px;
       color: #555;
     }
-    .total-badge {
-      background: #e0f2fe;
-      color: #0891b2;
+    .summary {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .badge {
       padding: 4px 12px;
       border-radius: 20px;
       font-weight: bold;
-      font-size: 13px;
+      font-size: 12px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-    }
-    thead tr {
-      background: #0891b2;
-      color: white;
-    }
+    .badge-blue  { background: #e0f2fe; color: #0891b2; }
+    .badge-green { background: #dcfce7; color: #16a34a; }
+    .badge-red   { background: #fee2e2; color: #dc2626; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    thead tr { background: #0891b2; color: white; }
     thead th {
       padding: 8px 6px;
       text-align: right;
@@ -152,16 +181,14 @@ function generateSwimmersHTML(swimmers: SwimmerReportItem[]): string {
       white-space: nowrap;
     }
     tbody tr:nth-child(even) { background: #f0f9ff; }
-    tbody tr:hover { background: #e0f2fe; }
-    tbody td {
-      padding: 7px 6px;
-      border-bottom: 1px solid #e2e8f0;
-    }
+    tbody td { padding: 7px 6px; border-bottom: 1px solid #e2e8f0; }
     .footer {
       margin-top: 20px;
       text-align: center;
       color: #888;
       font-size: 11px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
     }
     @media print {
       body { padding: 10px; }
@@ -173,11 +200,17 @@ function generateSwimmersHTML(swimmers: SwimmerReportItem[]): string {
   <div class="header">
     <h1>أكاديمية طنطا للسباحة 🏊</h1>
     <p>تقرير السباحين الشامل</p>
+    <div class="month-badge">شهر ${monthLabel}</div>
   </div>
 
   <div class="meta">
-    <span>تاريخ التقرير: <strong>${date}</strong></span>
-    <span class="total-badge">إجمالي السباحين: ${swimmers.length}</span>
+    <span>تاريخ الإنشاء: <strong>${printDate}</strong></span>
+  </div>
+
+  <div class="summary">
+    <span class="badge badge-blue">إجمالي السباحين: ${swimmers.length}</span>
+    <span class="badge badge-green">مدفوع: ${paidCount}</span>
+    <span class="badge badge-red">غير مدفوع: ${notPaidCount}</span>
   </div>
 
   <table>
@@ -192,7 +225,7 @@ function generateSwimmersHTML(swimmers: SwimmerReportItem[]): string {
         <th>هاتف ولي الأمر</th>
         <th>المدرب</th>
         <th>المجموعة</th>
-        <th>الإيصالات المقبولة</th>
+        <th>دفع ${monthLabel}؟</th>
       </tr>
     </thead>
     <tbody>
@@ -210,8 +243,16 @@ function generateSwimmersHTML(swimmers: SwimmerReportItem[]): string {
 // ==========================================
 // دالة توليد HTML تقرير المدربين للطباعة
 // ==========================================
-function generateCoachesHTML(coaches: CoachReportItem[]): string {
-  const date = new Date().toLocaleDateString("ar-EG", {
+function generateCoachesHTML(
+  coaches: CoachReportItem[],
+  lastMonth: number,
+  lastYear: number,
+): string {
+  // اسم الشهر الماضي بالعربية
+  const monthLabel = `${monthNames[lastMonth]} ${lastYear}`;
+
+  // تاريخ إنشاء التقرير
+  const printDate = new Date().toLocaleDateString("ar-EG", {
     year: "numeric", month: "long", day: "numeric",
   });
 
@@ -227,10 +268,6 @@ function generateCoachesHTML(coaches: CoachReportItem[]): string {
         <td>${s.group_label}</td>
       </tr>
     `).join("");
-
-    const emptyRow = coach.swimmers.length === 0
-      ? `<tr><td colspan="5" style="text-align:center;color:#888;padding:12px">لا يوجد سباحون معينون لهذا المدرب</td></tr>`
-      : "";
 
     return `
       <div class="coach-card">
@@ -255,10 +292,7 @@ function generateCoachesHTML(coaches: CoachReportItem[]): string {
               <th>المجموعة</th>
             </tr>
           </thead>
-          <tbody>
-            ${swimmerRows}
-            ${emptyRow}
-          </tbody>
+          <tbody>${swimmerRows}</tbody>
         </table>
         ` : `<p style="text-align:center;color:#888;padding:12px;font-size:12px">لا يوجد سباحون معينون لهذا المدرب</p>`}
       </div>
@@ -269,7 +303,7 @@ function generateCoachesHTML(coaches: CoachReportItem[]): string {
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تقرير المدربين - أكاديمية طنطا للسباحة</title>
+  <title>تقرير المدربين - ${monthLabel} - أكاديمية طنطا للسباحة</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -286,22 +320,36 @@ function generateCoachesHTML(coaches: CoachReportItem[]): string {
       border-bottom: 2px solid #0891b2;
     }
     .header h1 { font-size: 20px; color: #0891b2; margin-bottom: 4px; }
-    .header p { color: #555; font-size: 13px; }
+    .header .month-badge {
+      display: inline-block;
+      margin-top: 6px;
+      background: #0891b2;
+      color: white;
+      padding: 3px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+    }
     .meta {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 20px;
+      align-items: center;
+      margin-bottom: 12px;
       font-size: 12px;
       color: #555;
     }
-    .total-badge {
-      background: #e0f2fe;
-      color: #0891b2;
+    .summary {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .badge {
       padding: 4px 12px;
       border-radius: 20px;
       font-weight: bold;
-      font-size: 13px;
+      font-size: 12px;
     }
+    .badge-blue { background: #e0f2fe; color: #0891b2; }
     .coach-card {
       margin-bottom: 24px;
       border: 1px solid #e2e8f0;
@@ -356,6 +404,8 @@ function generateCoachesHTML(coaches: CoachReportItem[]): string {
       text-align: center;
       color: #888;
       font-size: 11px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
     }
     @media print {
       body { padding: 10px; }
@@ -367,13 +417,16 @@ function generateCoachesHTML(coaches: CoachReportItem[]): string {
   <div class="header">
     <h1>أكاديمية طنطا للسباحة 🏊</h1>
     <p>تقرير المدربين وأعداد السباحين</p>
+    <div class="month-badge">شهر ${monthLabel}</div>
   </div>
 
   <div class="meta">
-    <span>تاريخ التقرير: <strong>${date}</strong></span>
-    <span class="total-badge">
-      ${coaches.length} مدرب | ${totalSwimmers} سباح نشط
-    </span>
+    <span>تاريخ الإنشاء: <strong>${printDate}</strong></span>
+  </div>
+
+  <div class="summary">
+    <span class="badge badge-blue">${coaches.length} مدرب</span>
+    <span class="badge badge-blue">${totalSwimmers} سباح نشط</span>
   </div>
 
   ${coachSections}
@@ -396,7 +449,6 @@ function printHTML(html: string) {
   }
   win.document.write(html);
   win.document.close();
-  // ننتظر تحميل الصفحة ثم نطبع
   win.onload = () => win.print();
 }
 
@@ -426,11 +478,11 @@ export default function ReportsClient() {
       return;
     }
 
-    const { swimmers } = await res.json();
+    const { swimmers, lastMonth, lastYear } = await res.json();
     setLoading(null);
 
-    // توليد HTML وفتح نافذة الطباعة
-    const html = generateSwimmersHTML(swimmers);
+    // توليد HTML بتاريخ الشهر الماضي وفتح نافذة الطباعة
+    const html = generateSwimmersHTML(swimmers, lastMonth, lastYear);
     printHTML(html);
   };
 
@@ -449,11 +501,11 @@ export default function ReportsClient() {
       return;
     }
 
-    const { coaches } = await res.json();
+    const { coaches, lastMonth, lastYear } = await res.json();
     setLoading(null);
 
-    // توليد HTML وفتح نافذة الطباعة
-    const html = generateCoachesHTML(coaches);
+    // توليد HTML بتاريخ الشهر الماضي وفتح نافذة الطباعة
+    const html = generateCoachesHTML(coaches, lastMonth, lastYear);
     printHTML(html);
   };
 
@@ -478,7 +530,7 @@ export default function ReportsClient() {
           <h2 className="text-lg font-semibold text-white">أي تقرير تريد إنشاؤه؟</h2>
         </div>
         <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-          اختر نوع التقرير وسيُفتح في نافذة جديدة جاهز للطباعة
+          سيُنشئ التقرير عن <strong className="text-white">الشهر الماضي</strong> ويُفتح في نافذة جديدة جاهزاً للطباعة
         </p>
       </div>
 
@@ -506,7 +558,7 @@ export default function ReportsClient() {
               تقرير السباحين الشامل
             </h3>
             <p className="text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-              جميع السباحين مع بيانات ولي الأمر والمدرب والمجموعة وعدد الإيصالات المقبولة
+              جميع السباحين مع بيانات ولي الأمر والمدرب والمجموعة وحالة دفع الشهر الماضي
             </p>
           </div>
 

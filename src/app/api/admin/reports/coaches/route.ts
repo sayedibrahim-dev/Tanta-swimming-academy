@@ -22,6 +22,14 @@ export async function GET() {
     return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   }
 
+  // ==========================================
+  // حساب الشهر الماضي للعنوان والتصفية
+  // ==========================================
+  const now           = new Date();
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonth     = lastMonthDate.getMonth() + 1; // getMonth() يبدأ من 0
+  const lastYear      = lastMonthDate.getFullYear();
+
   // جلب كل المدربين النشطين
   const { data: coaches, error: coachError } = await supabaseAdmin
     .from("coaches")
@@ -67,5 +75,6 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ coaches: result });
+  // إرجاع البيانات مع معلومات الشهر المرجعي
+  return NextResponse.json({ coaches: result, lastMonth, lastYear });
 }
