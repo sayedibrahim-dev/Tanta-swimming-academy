@@ -9,6 +9,7 @@ import { authOptions } from "@/lib/auth";
 
 // استيراد الـ Supabase بصلاحيات كاملة
 import { supabaseAdmin } from "@/lib/supabase";
+import { simulatedNow } from "@/lib/now";
 
 // ==========================================
 // GET /api/admin/reports/coaches
@@ -25,7 +26,7 @@ export async function GET() {
   // ==========================================
   // حساب الشهر الماضي للعنوان والتصفية
   // ==========================================
-  const now           = new Date();
+  const now           = simulatedNow();
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonth     = lastMonthDate.getMonth() + 1; // getMonth() يبدأ من 0
   const lastYear      = lastMonthDate.getFullYear();

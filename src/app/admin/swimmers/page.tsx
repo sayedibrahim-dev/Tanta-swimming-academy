@@ -15,6 +15,7 @@ import SwimmersClient from "./SwimmersClient";
 
 // استيراد الأنواع المشتركة من lib
 import type { CoachOption, GroupOption } from "@/lib/types";
+import { simulatedNow } from "@/lib/now";
 
 // صفحة إدارة السباحين — Server Component (تشتغل على السيرفر)
 export default async function AdminSwimmersPage() {
@@ -24,7 +25,7 @@ export default async function AdminSwimmersPage() {
   if (!session || session.user.role !== "admin") redirect("/login");
 
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
-  const now          = new Date();
+  const now          = simulatedNow();
   const currentMonth = now.getMonth() + 1;
   const currentYear  = now.getFullYear();
 

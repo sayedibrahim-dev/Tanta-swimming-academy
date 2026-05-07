@@ -3,6 +3,7 @@ import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { Users, ClipboardList, CreditCard, GraduationCap } from "lucide-react";
+import { simulatedNow } from "@/lib/now";
 
 // ==========================================
 // بطاقة الإحصاء - مكون مساعد صغير
@@ -65,7 +66,7 @@ export default async function AdminDashboard() {
   if (!session || session.user.role !== "admin") redirect("/login");
 
   // الشهر والسنة الحاليان لحساب غير المدفوعين ديناميكياً
-  const now          = new Date();
+  const now          = simulatedNow();
   const currentMonth = now.getMonth() + 1;
   const currentYear  = now.getFullYear();
 

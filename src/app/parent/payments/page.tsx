@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import PaymentUploadCard from "./PaymentUploadCard";
 import { CreditCard } from "lucide-react";
+import { simulatedNow } from "@/lib/now";
 
 // أسماء الشهور بالعربية
 const monthNames = [
@@ -14,7 +15,7 @@ const monthNames = [
 export default async function PaymentsPage() {
   const session = await getAppSession();
   if (!session || session.user.role !== "parent") redirect("/login");
-  const now = new Date();
+  const now = simulatedNow();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 

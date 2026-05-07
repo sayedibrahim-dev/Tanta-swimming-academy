@@ -12,6 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 // استيراد المكوّن التفاعلي للعرض والفلترة
 import CoachSwimmersClient from "./CoachSwimmersClient";
+import { simulatedNow } from "@/lib/now";
 
 // صفحة سباحي المدرب — Server Component (تشتغل على السيرفر)
 export default async function CoachSwimmersPage() {
@@ -24,7 +25,7 @@ export default async function CoachSwimmersPage() {
   const coachId = session.user.profileId;
 
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
-  const now          = new Date();
+  const now          = simulatedNow();
   const currentMonth = now.getMonth() + 1;
   const currentYear  = now.getFullYear();
 

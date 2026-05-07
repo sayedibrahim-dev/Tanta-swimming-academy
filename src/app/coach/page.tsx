@@ -3,6 +3,7 @@ import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { Users, CheckCircle2, XCircle, CalendarDays, UserCircle2 } from "lucide-react";
+import { simulatedNow } from "@/lib/now";
 
 // ==========================================
 // تسميات أنماط الأيام بالعربية
@@ -23,7 +24,7 @@ export default async function CoachDashboard() {
   const coachId = session.user.profileId; // معرف المدرب في جدول coaches
 
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
-  const now          = new Date();
+  const now          = simulatedNow();
   const currentMonth = now.getMonth() + 1;
   const currentYear  = now.getFullYear();
 

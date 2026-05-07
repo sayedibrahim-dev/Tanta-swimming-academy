@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Users, CreditCard, Clock, BellRing, ArrowLeft } from "lucide-react";
+import { simulatedNow } from "@/lib/now";
 
 // ==========================================
 // أسماء الشهور بالعربية
@@ -19,11 +20,10 @@ export default async function ParentDashboard() {
   // جلب بيانات الجلسة للحصول على اسم ولي الأمر ومعرفه
   const session = await getAppSession();
 
-  // اسم الشهر الحالي بالعربية للرسالة الشهرية
-  const currentMonthName = arabicMonths[new Date().getMonth()];
-
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
-  const now          = new Date();
+  const now          = simulatedNow(); // يدعم محاكاة التاريخ عبر SIMULATE_DATE
+  // اسم الشهر الحالي بالعربية للرسالة الشهرية
+  const currentMonthName = arabicMonths[now.getMonth()];
   const currentMonth = now.getMonth() + 1; // getMonth() يبدأ من 0
   const currentYear  = now.getFullYear();
 

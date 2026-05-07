@@ -3,6 +3,7 @@ import { getAppSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { UserPlus, Clock, CheckCircle2, XCircle, Users, GraduationCap, Phone } from "lucide-react";
+import { simulatedNow } from "@/lib/now";
 import Link from "next/link";
 import { levelLabels } from "@/lib/types"; // ثابت ترجمة المستويات المشترك
 
@@ -45,7 +46,7 @@ export default async function ParentSwimmersPage() {
   if (!session || session.user.role !== "parent") redirect("/login");
 
   // الشهر والسنة الحاليان لحساب حالة الدفع ديناميكياً
-  const now          = new Date();
+  const now          = simulatedNow();
   const currentMonth = now.getMonth() + 1; // getMonth() يبدأ من 0
   const currentYear  = now.getFullYear();
 
