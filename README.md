@@ -229,9 +229,7 @@ npm run dev
 # open http://localhost:3000
 ```
 
-**Default admin login** (seeded by schema.sql):
-- Email: `admin@tanta-swimming.com`
-- Password: `Admin@1234`
+After running the schema, log in with the admin credentials defined in `supabase/schema.sql`.
 
 ---
 
