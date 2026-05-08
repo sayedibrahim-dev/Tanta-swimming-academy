@@ -247,4 +247,4 @@ This project required solving problems CS50 problem sets don't cover:
 
 ---
 
-*CS50x Final Project — 2025 | Tanta, Egypt*
+*CS50x Final Project — 2026 | Tanta, Egypt*
