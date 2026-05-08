@@ -2,7 +2,6 @@
 
 **CS50x Final Project**
 **Author:** Sayed Ibrahim
-**Live:** [https://tanta-swimming-academy.vercel.app](https://tanta-swimming-academy.vercel.app)
 
 ---
 
@@ -74,7 +73,7 @@ The system serves **three roles**:
 | UI Components | shadcn/ui + lucide-react icons |
 | Validation | Zod v4 |
 | Password Hashing | bcryptjs (cost 12) |
-| Deployment | Vercel |
+| Deployment | Local (localhost:3000) |
 
 ---
 
@@ -178,7 +177,7 @@ The user's role is embedded in the JWT token. Every protected page and API route
 A `Map<ip, { count, firstAttempt }>` in `auth.ts` handles brute-force protection. It resets on server restart — acceptable for a small academy where the server rarely restarts. The threshold (5 attempts / 15 min) was chosen to block automated attacks while not frustrating real users who mistype once or twice.
 
 ### Lazy Resend Client
-Next.js evaluates module-level code at build time on Vercel. Calling `new Resend(process.env.RESEND_API_KEY)` at the top of a file fails the build because secrets aren't available then. The fix: a `getResendClient()` function that creates the instance only on the first actual HTTP request at runtime.
+Next.js evaluates module-level code at startup. Calling `new Resend(process.env.RESEND_API_KEY)` at the top of a file can fail if the environment isn't fully initialized yet. The fix: a `getResendClient()` function that creates the instance only on the first actual HTTP request at runtime.
 
 ### Password Privacy
 The admin never sets or sees any password. Coaches receive a system-generated temporary password shown to the admin exactly once on creation. Both coaches and parents use the self-service "Forgot Password" flow when they need to reset — the admin is never involved.
@@ -242,7 +241,7 @@ This project required solving problems CS50 problem sets don't cover:
 
 - **Role-based access control** — every API route and page checks who is asking before returning or modifying data
 - **Cascade vs SET NULL** — designing schema relationships so deleting one entity doesn't accidentally destroy unrelated data
-- **Build-time vs runtime** — code that runs at module load time can't safely access environment variables on Vercel's build servers
+- **Initialization order** — code that runs at module load time can't safely access environment variables before they're loaded, requiring lazy initialization patterns
 - **Email security** — returning a consistent response for password reset requests to prevent leaking which emails are registered
 - **Real Arabic UX** — RTL layout, Arabic validation messages, making technical states ("pending review", "rejected: receipt unclear") readable by non-technical parents and staff
 
