@@ -1,203 +1,163 @@
 # Tanta Swimming Academy — Management System
+#### Video Demo: <URL HERE>
+#### Description:
 
-**CS50x Final Project**
-**Author:** Sayed Ibrahim
+**Tanta Swimming Academy** is a full-stack web application that digitizes the day-to-day management of a real swimming academy. Before this system, the academy relied on paper records, WhatsApp messages, and phone calls to handle registrations, monthly payments, and swimmer assignments. This application replaces all of that with a structured, role-based platform — built entirely in Arabic (RTL) because the academy's staff and parents are Arabic speakers.
 
----
-
-## Video Demo
-
-> _Add your YouTube / CS50 submit video URL here_
+The system serves three roles: **Admin**, **Coach**, and **Parent**. Each role has its own dashboard, its own set of pages, and its own API routes — and every request is checked against the logged-in user's role before any data is returned or modified.
 
 ---
 
-## Description
+## The Problem It Solves
 
-**Tanta Swimming Academy** is a full-stack web application that digitizes the day-to-day management of a real swimming academy. Before this system, the academy relied on paper records, WhatsApp messages, and phone calls to handle registrations, monthly payments, and swimmer assignments. This application replaces all of that with a structured, role-based platform — built in Arabic (RTL) because the academy's staff and parents are Arabic speakers.
-
-The system serves **three roles**:
-
-| Role | What they do |
-|------|-------------|
-| **Admin** | Full control — coaches, groups, swimmers, enrollment requests, payments |
-| **Coach** | Views their assigned swimmers and payment status |
-| **Parent** | Registers their children, submits receipts, pays monthly fees |
+A swimming academy needs to track dozens of children across multiple coaches and training groups, collect monthly fees, and review enrollment paperwork. Doing this over WhatsApp and paper is slow, error-prone, and offers no audit trail. This system gives the academy a single platform where parents can register their children and pay online, coaches can see exactly who they're responsible for, and the admin has full visibility and control over everything.
 
 ---
 
 ## Features
 
 ### Authentication & Security
-- Email + password login — **bcrypt** hashing (cost factor 12)
-- **Rate limiting** — 5 failed attempts per IP per 15 minutes; friendly Arabic lockout message with remaining time
-- **Self-service Forgot Password** — user enters email → receives a one-time reset link valid for 1 hour (sent via Resend)
-- JWT sessions via NextAuth v4 — role embedded in token, no DB lookup per request
-- Forgot-password always returns the same response whether the email exists or not (prevents email enumeration)
+- Email and password login with **bcrypt** password hashing (cost factor 12)
+- **Rate limiting** — a maximum of 5 failed login attempts per IP address per 15 minutes. On lockout, the user sees a friendly Arabic message with the remaining wait time
+- **Self-service Forgot Password** — the user enters their email address and receives a one-time reset link valid for exactly one hour, delivered via Resend. The link contains a secure random 64-character hex token stored in the `password_reset_tokens` table and deleted immediately after use
+- JWT sessions via NextAuth v4 — the user's role is embedded in the token, so no database query is needed on every request to determine access level
+- The forgot-password endpoint always returns the same response regardless of whether the email exists in the database, which prevents email enumeration attacks
 
 ### Admin Dashboard
-| Section | What it does |
-|---------|-------------|
-| Overview | Live stats — pending requests, pending payments, active swimmers, coaches |
-| Enrollment Requests | Approve / reject swimmer registrations; add rejection note |
-| Monthly Payments | Review receipt per swimmer per month; approve or reject with reason |
-| Swimmers | Full list — status, coach, group, payment state; edit swimmer data |
-| Coaches | Add / edit / delete coaches; system auto-generates a temp password shown once |
-| Training Groups | Create groups (day pattern + time slot) assigned to a coach |
-| Parents | View all parents with their children; delete parent (cascades to swimmers) |
-| Reports | Swimmer and coach summary reports |
-| Settings | Admin updates own email and password |
-| Notification badges | Sidebar shows live badge count for pending requests and payments |
+The admin has access to nine sections:
+
+| Section | Purpose |
+|---------|---------|
+| Overview | Live counts of pending requests, pending payments, active swimmers, and total coaches |
+| Enrollment Requests | Review receipts submitted by parents when registering a child; approve or reject with a written note |
+| Monthly Payments | Review monthly fee receipts per swimmer; approve or reject with a reason |
+| Swimmers | Full list of all swimmers with their status, assigned coach, group, and payment state; edit swimmer data |
+| Coaches | Add, edit, or delete coaches; the system auto-generates a temporary password shown once to the admin |
+| Training Groups | Create groups with a day pattern (Sat/Mon/Wed or Sun/Tue/Thu) and a time slot, assigned to a coach |
+| Parents | View all parent accounts with their children listed; delete a parent account (which cascades to their swimmers) |
+| Reports | Summary reports for swimmers and coaches |
+| Settings | Admin can update their own email and password |
+
+The sidebar shows **live notification badges** on the Requests and Payments links, so the admin always knows when something needs attention.
 
 ### Parent Dashboard
-- Onboarding guide shown to new parents with no swimmers — 3-step card explains the process
-- Add multiple swimmers (name, age, level)
-- Upload enrollment receipt per swimmer → triggers admin review
-- Upload monthly payment receipts for active swimmers
-- View payment history per swimmer — see status, rejection reason if applicable
+- New parents see an **onboarding guide** — a three-step card explaining the full process (add swimmer → wait for approval → pay monthly)
+- Parents can add multiple swimmers with name, age, and level
+- After adding a swimmer, they upload an enrollment receipt which triggers an admin review
+- Once approved, the swimmer becomes active and the parent can upload monthly payment receipts
+- The payment history page shows the status of every receipt and, if rejected, the reason written by the admin
 
 ### Coach Dashboard
-- View all assigned swimmers with info and current payment status
-- Update personal email and password
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16.2.4 — App Router, TypeScript |
-| Database | Supabase (PostgreSQL + Storage) |
-| Auth | NextAuth v4 — JWT strategy |
-| Email | Resend |
-| Styling | Tailwind CSS v4 + CSS variables (dark navy + gold theme) |
-| UI Components | shadcn/ui + lucide-react icons |
-| Validation | Zod v4 |
-| Password Hashing | bcryptjs (cost 12) |
-| Deployment | Local (localhost:3000) |
+- Coaches see only their assigned swimmers with current payment status
+- Coaches can update their own email and password from the settings page
 
 ---
 
 ## File Structure
 
-```
-src/
-├── app/
-│   ├── admin/
-│   │   ├── layout.tsx          ← Fetches pending counts (Promise.all) → Sidebar badges
-│   │   ├── page.tsx            ← Overview stats (Server Component)
-│   │   ├── coaches/            ← Add / edit / delete coaches
-│   │   ├── groups/             ← Training groups management
-│   │   ├── parents/            ← Parents list + delete
-│   │   ├── payments/           ← Monthly payment review
-│   │   ├── reports/            ← Summary reports
-│   │   ├── requests/           ← Enrollment requests review
-│   │   ├── settings/           ← Admin account settings
-│   │   └── swimmers/           ← Full swimmers list
-│   ├── coach/
-│   │   ├── page.tsx            ← Coach home
-│   │   ├── swimmers/           ← Assigned swimmers
-│   │   └── settings/           ← Coach profile
-│   ├── parent/
-│   │   ├── page.tsx            ← Home + onboarding guide
-│   │   ├── swimmers/           ← Add / view swimmers
-│   │   └── payments/           ← Upload + view payment receipts
-│   ├── login/                  ← Login (rate limit UI + forgot-password link)
-│   ├── register/               ← Parent self-registration
-│   ├── forgot-password/        ← Email input → sends reset link
-│   ├── reset-password/         ← Token from URL → set new password
-│   └── api/
-│       ├── auth/
-│       │   ├── [...nextauth]/  ← NextAuth handler
-│       │   ├── register/       ← Parent registration
-│       │   ├── forgot-password/ ← Generate token + send email via Resend
-│       │   └── reset-password/  ← Validate token + update bcrypt hash
-│       ├── admin/
-│       │   ├── coaches/        ← POST / PATCH / DELETE
-│       │   ├── groups/         ← POST / PATCH / DELETE
-│       │   ├── parents/[id]/   ← DELETE
-│       │   ├── payments/[id]/  ← approve / reject
-│       │   ├── requests/[id]/  ← approve / reject
-│       │   ├── reports/        ← swimmers + coaches JSON
-│       │   ├── settings/       ← email / password update
-│       │   └── swimmers/[id]/  ← PATCH (edit swimmer)
-│       ├── coach/settings/     ← Coach profile update
-│       ├── parent/
-│       │   ├── swimmers/       ← Add swimmer
-│       │   └── payments/       ← Upload payment receipt
-│       └── upload/             ← Supabase Storage signed upload
-├── components/
-│   ├── layout/Sidebar.tsx      ← Role-aware sidebar with notification badges
-│   └── shared/ImageUploader.tsx ← Reusable receipt image uploader
-└── lib/
-    ├── auth.ts                 ← NextAuth config + in-memory rate limiter
-    ├── supabase.ts             ← Supabase anon + admin (service role) clients
-    └── resend.ts               ← Lazy Resend client initialization
-```
+### Pages (`src/app/`)
+
+- `login/` — Login page. Handles the rate-limit UI (shows orange warning with countdown on lockout) and includes a "Forgot Password?" link
+- `register/` — Parent self-registration page
+- `forgot-password/` — Accepts an email address and triggers the reset email
+- `reset-password/` — Reads the token from the URL query string, validates it, and lets the user set a new password
+- `admin/layout.tsx` — Fetches pending request and payment counts in parallel using `Promise.all`, then passes them to the Sidebar as badge data
+- `admin/page.tsx` — Overview stats, rendered as a Server Component
+- `admin/coaches/` — Coaches management (add, edit, delete); includes success modal that shows the temporary password once
+- `admin/groups/` — Training groups management
+- `admin/parents/` — Parents list with delete functionality
+- `admin/payments/` — Monthly payment review with approve/reject and rejection note
+- `admin/requests/` — Enrollment request review with approve/reject and rejection note
+- `admin/swimmers/` — Full swimmers list with edit capability
+- `admin/reports/` — Swimmer and coach summary reports
+- `admin/settings/` — Admin account settings
+- `parent/page.tsx` — Parent home with onboarding guide (disappears once a swimmer is added)
+- `parent/swimmers/` — Add and view swimmers
+- `parent/payments/` — Upload and view monthly payment receipts
+- `coach/page.tsx` — Coach home
+- `coach/swimmers/` — Assigned swimmers list
+- `coach/settings/` — Coach profile settings
+
+### API Routes (`src/app/api/`)
+
+- `auth/[...nextauth]/` — NextAuth handler (credentials provider, JWT callbacks, role injection)
+- `auth/register/` — Creates a new parent account with a hashed password
+- `auth/forgot-password/` — Looks up the user by email, generates a token, saves it to the database, and sends the reset email via Resend
+- `auth/reset-password/` — Validates the token, checks expiry, updates the `password_hash`, and deletes the token immediately
+- `admin/coaches/` — POST to add a coach with auto-generated password; PATCH and DELETE for edit and removal
+- `admin/groups/` — POST, PATCH, DELETE for training groups
+- `admin/parents/[id]/` — DELETE a parent (cascades to swimmers)
+- `admin/payments/[id]/approve/` and `reject/` — Update payment status
+- `admin/requests/[id]/approve/` and `reject/` — Update enrollment request status
+- `admin/swimmers/[id]/` — PATCH to edit swimmer data
+- `admin/reports/` — Returns swimmer and coach report data as JSON
+- `admin/settings/email/` and `password/` — Admin account updates
+- `coach/settings/` — Coach profile update
+- `parent/swimmers/` — Add a swimmer
+- `parent/payments/` — Upload a monthly payment receipt
+- `upload/` — Handles file uploads to Supabase Storage and returns the signed URL
+
+### Library (`src/lib/`)
+
+- `auth.ts` — NextAuth configuration including the credentials provider, bcrypt password comparison, JWT callbacks that inject the user's role and ID, and the in-memory rate limiter implemented as a `Map<ip, { count, firstAttempt }>`
+- `supabase.ts` — Exports both the anonymous Supabase client and the `supabaseAdmin` service-role client used in all server-side API routes
+- `resend.ts` — Exports a `getResendClient()` function that initializes the Resend instance lazily (only on first use at runtime, not at module load time)
+
+### Components (`src/components/`)
+
+- `layout/Sidebar.tsx` — Role-aware navigation sidebar that accepts a `pendingCounts` prop and renders cyan notification badges on relevant links
+- `shared/ImageUploader.tsx` — Reusable image uploader component used for both enrollment receipts and monthly payment receipts
 
 ---
 
 ## Database Schema
 
 ```
-users         (id, email, password_hash, name, phone, role)
-coaches       (id, user_id → users CASCADE, name, phone, active)
-parents       (id, user_id → users CASCADE, name, phone)
-swimmers      (id, parent_id → parents CASCADE,
-               coach_id → coaches SET NULL,
-               group_id → training_groups SET NULL,
-               name, age, level, status, payment_status)
-training_groups (id, coach_id → coaches CASCADE, day_pattern, time_slot, label)
-enrollment_requests (id, swimmer_id → swimmers CASCADE,
-                     receipt_image_url, status, notes)
-payments      (id, swimmer_id → swimmers CASCADE,
-               month, year, receipt_image_url, status, rejection_note,
-               UNIQUE(swimmer_id, month, year))
+users                (id, email, password_hash, name, phone, role)
+coaches              (id, user_id → users CASCADE, name, phone, active)
+parents              (id, user_id → users CASCADE, name, phone)
+swimmers             (id, parent_id → parents CASCADE,
+                      coach_id → coaches SET NULL,
+                      group_id → training_groups SET NULL,
+                      name, age, level, status, payment_status)
+training_groups      (id, coach_id → coaches CASCADE, day_pattern, time_slot, label)
+enrollment_requests  (id, swimmer_id → swimmers CASCADE, receipt_image_url, status, notes)
+payments             (id, swimmer_id → swimmers CASCADE,
+                      month, year, receipt_image_url, status, rejection_note,
+                      UNIQUE(swimmer_id, month, year))
 password_reset_tokens (id, user_id → users CASCADE, token UNIQUE, expires_at)
 ```
-
-**Key cascade rules:**
-- Delete `user` → deletes their `coach` or `parent` record automatically
-- Delete `parent` → deletes all their `swimmers` (and swimmers' payments/requests)
-- Delete `coach` → sets swimmers' `coach_id` to NULL — swimmers stay, just unassigned
 
 ---
 
 ## Design Decisions
 
 ### Server Components + Client Components
-Next.js App Router lets pages fetch their data server-side (no loading spinners, no extra API call from the browser) while keeping interactive pieces (modals, forms, optimistic updates) as Client Components. For example, the admin coaches page arrives with the full coach list already rendered — clicking "Add Coach" opens a local modal without any navigation.
+Next.js App Router makes it possible to mix Server Components (which fetch data on the server before the page is sent to the browser) with Client Components (which handle interactivity). Admin pages arrive fully populated — no loading spinners, no extra API calls from the browser. Interactive elements like modals and forms are Client Components that update local state optimistically after a successful API call, giving an instant response without a full page reload.
 
 ### Why Supabase?
-One platform gives a hosted PostgreSQL database, file storage (for receipt images), and a JavaScript client. Using the `service_role` key on the server bypasses Row Level Security for trusted server code, while RLS still protects against any accidental direct access.
+Supabase provides a hosted PostgreSQL database, a file storage service for receipt images, and a typed JavaScript client — all in one platform. All API routes use the `supabaseAdmin` client with the service role key, which bypasses Row Level Security for trusted server code. RLS is still enabled on every table as a safety layer against any direct database access that bypasses the application.
 
-### JWT Sessions (no sessions table)
-The user's role is embedded in the JWT token. Every protected page and API route reads the role from the token without touching the database — important at the admin layout level where several pages need to know the role.
+### JWT Sessions — No Sessions Table
+The user's role (`admin`, `coach`, or `parent`) is embedded directly in the JWT token at login time. Every protected page and every API route reads the role from the token without touching the database. This avoids a database query on every single request and eliminates the need for a sessions table entirely.
 
 ### In-Memory Rate Limiter
-A `Map<ip, { count, firstAttempt }>` in `auth.ts` handles brute-force protection. It resets on server restart — acceptable for a small academy where the server rarely restarts. The threshold (5 attempts / 15 min) was chosen to block automated attacks while not frustrating real users who mistype once or twice.
+The rate limiter is a `Map<ip, { count, firstAttempt }>` stored in memory in `auth.ts`. It resets on server restart, which is acceptable for a small academy. Choosing an in-memory approach instead of a Redis-based one keeps the infrastructure simple and cost-free while still blocking the automated brute-force attacks this feature is designed to stop.
 
-### Lazy Resend Client
-Next.js evaluates module-level code at startup. Calling `new Resend(process.env.RESEND_API_KEY)` at the top of a file can fail if the environment isn't fully initialized yet. The fix: a `getResendClient()` function that creates the instance only on the first actual HTTP request at runtime.
+### Lazy Resend Initialization
+Next.js evaluates module-level code at server startup. Creating a Resend instance at the top of a file with `new Resend(process.env.RESEND_API_KEY)` can fail if the environment variable is not yet available at that moment. The solution is `getResendClient()` — a function that creates the Resend instance only on the first actual call at runtime, never at module load time.
 
 ### Password Privacy
-The admin never sets or sees any password. Coaches receive a system-generated temporary password shown to the admin exactly once on creation. Both coaches and parents use the self-service "Forgot Password" flow when they need to reset — the admin is never involved.
+The admin never sets or sees any user's password. When a coach is created, the system generates a temporary password automatically and displays it to the admin exactly once. Both coaches and parents reset their own passwords through the self-service forgot-password flow — the admin is not involved at any point.
 
 ### Cascade vs SET NULL
-When a coach is deleted, their swimmers aren't deleted — only `coach_id` becomes NULL. A coach leaving the academy shouldn't erase the children's records. When a parent is deleted, their swimmers are deleted (CASCADE) because a swimmer without a parent has no guardian and no purpose in the system.
-
-### Optimistic UI
-After any successful CRUD operation the local React state is updated immediately without a page reload. If the API call fails, the error is shown and the state stays unchanged.
+When a coach is deleted, their swimmers are not deleted — `coach_id` is set to NULL. A coach leaving the academy should not erase the children's records. When a parent is deleted, their swimmers are deleted via CASCADE, because a swimmer record without a parent has no responsible guardian and no meaningful place in the system.
 
 ---
 
 ## How to Run Locally
 
-### Requirements
-- Node.js 18+
-- Supabase project (free tier)
-- Resend account (free tier: 100 emails/day)
-
-### Steps
+**Requirements:** Node.js 18+, a Supabase project (free tier works), a Resend account (free tier: 100 emails/day)
 
 ```bash
 git clone https://github.com/sayedibrahim6867-svg/Tanta-swimming-academy.git
@@ -205,7 +165,7 @@ cd Tanta-swimming-academy
 npm install
 ```
 
-Create `.env.local` in the project root:
+Create `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
@@ -216,33 +176,15 @@ NEXTAUTH_SECRET=any_random_32_char_string
 RESEND_API_KEY=your_resend_api_key
 ```
 
-Run the SQL schema in your Supabase project's SQL Editor:
-
-```
-Copy the full contents of supabase/schema.sql and execute it.
-```
-
-Start the dev server:
+Run `supabase/schema.sql` in your Supabase SQL Editor, then:
 
 ```bash
 npm run dev
-# open http://localhost:3000
 ```
 
-After running the schema, log in with the admin credentials defined in `supabase/schema.sql`.
-
----
-
-## What I Learned
-
-This project required solving problems CS50 problem sets don't cover:
-
-- **Role-based access control** — every API route and page checks who is asking before returning or modifying data
-- **Cascade vs SET NULL** — designing schema relationships so deleting one entity doesn't accidentally destroy unrelated data
-- **Initialization order** — code that runs at module load time can't safely access environment variables before they're loaded, requiring lazy initialization patterns
-- **Email security** — returning a consistent response for password reset requests to prevent leaking which emails are registered
-- **Real Arabic UX** — RTL layout, Arabic validation messages, making technical states ("pending review", "rejected: receipt unclear") readable by non-technical parents and staff
+Open `http://localhost:3000` and log in with the admin credentials defined in `supabase/schema.sql`.
 
 ---
 
 *CS50x Final Project — 2026 | Tanta, Egypt*
+*GitHub: sayedibrahim6867-svg | edX: SI_2504_5958*
