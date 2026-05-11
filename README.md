@@ -1,5 +1,5 @@
 # Tanta Swimming Academy — Management System
-#### Video Demo: <URL HERE>
+#### Video Demo: https://youtu.be/7HJchoSXvSo
 #### Description:
 
 **Tanta Swimming Academy** is a full-stack web application that digitizes the day-to-day management of a real swimming academy. Before this system, the academy relied on paper records, WhatsApp messages, and phone calls to handle registrations, monthly payments, and swimmer assignments. This application replaces all of that with a structured, role-based platform — built entirely in Arabic (RTL) because the academy's staff and parents are Arabic speakers.
